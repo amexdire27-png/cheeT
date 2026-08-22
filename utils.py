@@ -131,7 +131,17 @@ def write_pid() -> None:
     path = pid_path()
     ensure_dir(path.parent, hidden=True)
     hide_path(path.parent)
-    path.write_text(str(os.getpid()), encoding="utf-8")
+    try:
+        if path.exists():
+            kernel32.SetFileAttributesW(str(path), 0x80)  # FILE_ATTRIBUTE_NORMAL
+        path.write_text(str(os.getpid()), encoding="utf-8")
+    except OSError:
+        try:
+            path.unlink()
+            path.write_text(str(os.getpid()), encoding="utf-8")
+        except OSError:
+            _log.debug("Could not write pid file %s", path, exc_info=True)
+            return
     hide_path(path)
 
 
