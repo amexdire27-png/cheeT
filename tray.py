@@ -99,12 +99,24 @@ def _run_vbs(name: str) -> None:
         _log.exception("Helper %s failed", name)
 
 
-def _start_host(_icon=None, _item=None) -> None:
+def start_host(_icon=None, _item=None) -> None:
+    """Really start the host (same path as the tray Start item)."""
+    _log.info("Start requested")
     _run_vbs("run_hidden.vbs")
 
 
-def _restart(_icon=None, _item=None) -> None:
+def restart_host(_icon=None, _item=None) -> None:
+    """Really stop then start the host (same path as the tray Restart item)."""
+    _log.info("Restart requested")
     _run_vbs("restart_host.vbs")
+
+
+def _start_host(_icon=None, _item=None) -> None:
+    start_host(_icon, _item)
+
+
+def _restart(_icon=None, _item=None) -> None:
+    restart_host(_icon, _item)
 
 
 def _make_icon():
