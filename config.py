@@ -24,6 +24,9 @@ DEFAULT_PROMPT = (
 class Hotkeys:
     screenshot: str
     ocr: str
+    dismiss: str
+    start: str
+    restart: str
 
 
 @dataclass(frozen=True)
@@ -141,6 +144,9 @@ def load_config() -> Config:
         "<ctrl>+<alt>+p",
     )
     ocr = _normalize_hotkey(str(hot.get("ocr") or ""), "<ctrl>+<alt>+t")
+    dismiss = _normalize_hotkey(str(hot.get("dismiss") or ""), "<ctrl>+<alt>+x")
+    start = _normalize_hotkey(str(hot.get("start") or ""), "<ctrl>+<alt>+<shift>+g")
+    restart = _normalize_hotkey(str(hot.get("restart") or ""), "<ctrl>+<alt>+r")
 
     fallbacks_raw = merged.get("fallback_models")
     fallbacks: list[str] = []
@@ -169,7 +175,13 @@ def load_config() -> Config:
         request_timeout_seconds=_as_int(
             merged.get("request_timeout_seconds"), 25, minimum=8, maximum=60
         ),
-        hotkeys=Hotkeys(screenshot=screenshot, ocr=ocr),
+        hotkeys=Hotkeys(
+            screenshot=screenshot,
+            ocr=ocr,
+            dismiss=dismiss,
+            start=start,
+            restart=restart,
+        ),
         system_prompt=str(merged.get("system_prompt") or DEFAULT_PROMPT).strip(),
         notification_duration_seconds=_as_int(
             merged.get("notification_duration_seconds"), 5, minimum=2, maximum=30
