@@ -17,6 +17,7 @@ import capture
 import notify
 from config import Config, load_config
 from utils import (
+    AbortError,
     AppError,
     acquire_singleton,
     clear_pid,
@@ -56,10 +57,15 @@ def _run_job(kind: str, fn) -> None:
         _log.info("Hotkey ignored (already working)")
         notify.present_status("Busy", duration=2)
         return
+    if _client:
+        _client.reset_cancel()
 
     def _worker() -> None:
         try:
             fn()
+        except AbortError:
+            _log.info("%s aborted", kind)
+            notify.dismiss_all()
         except AppError as exc:
             _log.warning("%s failed: %s", kind, exc)
             notify.dismiss_status()
@@ -82,6 +88,7 @@ def _on_screenshot() -> None:
     result = notify.run_with_status(
         lambda: _client.ask_image(png, ocr_mode=False),
         timeout=_cfg.request_timeout_seconds + 20,
+        cancelled=_client.cancelled,
     )
     notify.present_analysis(result, duration=_cfg.notification_duration_seconds)
 
@@ -96,6 +103,7 @@ def _on_ocr() -> None:
         result = notify.run_with_status(
             lambda: _client.ask_text(native),
             timeout=_cfg.request_timeout_seconds + 20,
+            cancelled=_client.cancelled,
         )
     else:
         path, png = capture.capture_window(hwnd, _cfg.screenshot_folder)
@@ -103,6 +111,7 @@ def _on_ocr() -> None:
         result = notify.run_with_status(
             lambda: _client.ask_image(png, ocr_mode=True),
             timeout=_cfg.request_timeout_seconds + 20,
+            cancelled=_client.cancelled,
         )
     notify.present_analysis(result, duration=_cfg.notification_duration_seconds)
 
@@ -110,6 +119,15 @@ def _on_ocr() -> None:
 def _on_dismiss() -> None:
     notify.dismiss_all()
     _log.info("Toasts force-dismissed")
+
+
+def _on_abort() -> None:
+    if _client:
+        _client.abort()
+    notify.dismiss_all()
+    _log.info("In-flight work aborted")
+    if _busy.locked():
+        notify.present_status("Aborted", duration=2)
 
 
 def main() -> int:
@@ -147,25 +165,27 @@ def main() -> int:
     _log.info("PageMind started. log=%s config=%s", log_path, _cfg.source_path)
     shown = _cfg.hotkeys.display()
     _log.info(
-        "Hotkeys: screenshot=%s ocr=%s dismiss=%s start=%s restart=%s model=%s fallbacks=%s timeout=%ss",
+        "Hotkeys: screenshot=%s ocr=%s dismiss=%s abort=%s start=%s restart=%s keys=%s model=%s fallbacks=%s timeout=%ss",
         shown["screenshot"],
         shown["ocr"],
         shown["dismiss"],
+        shown["abort"],
         shown["start"],
         shown["restart"],
+        len(_cfg.api_keys),
         _cfg.model,
         ",".join(_cfg.fallback_models),
         _cfg.request_timeout_seconds,
     )
 
-    if not _cfg.api_key and not _cfg.backup_api_key:
+    if not _cfg.api_keys:
         _log.error("No API key configured")
         notify.present_error(
-            "Add your Gemini API key in config.json",
+            "Add Gemini API keys in config.json",
             duration=_cfg.notification_duration_seconds,
         )
-    elif _cfg.backup_api_key:
-        _log.info("Backup Gemini API key is configured")
+    else:
+        _log.info("Using %s Gemini API key(s)", len(_cfg.api_keys))
 
     _client = ai.GeminiClient(_cfg)
 
@@ -173,6 +193,7 @@ def main() -> int:
         _cfg.hotkeys.screenshot: lambda: _run_job("screenshot", _on_screenshot),
         _cfg.hotkeys.ocr: lambda: _run_job("ocr", _on_ocr),
         _cfg.hotkeys.dismiss: _on_dismiss,
+        _cfg.hotkeys.abort: _on_abort,
     }
 
     try:
