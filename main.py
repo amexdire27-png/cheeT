@@ -1,11 +1,7 @@
 """
 PageMind — invisible Windows copilot.
 
-Ctrl+Alt+P  screenshot the active window (prefer browser) → Gemini → toast
-Ctrl+Alt+T  extract text / OCR the active window → Gemini → toast
-Ctrl+Alt+X  force-close any Sync Host toast immediately
-Ctrl+Alt+Shift+G  start the host
-Ctrl+Alt+R  restart the host
+Hotkeys come from config.json (hotkeys.*). Edit that file, then Restart.
 """
 
 from __future__ import annotations
@@ -149,11 +145,14 @@ def main() -> int:
     log_path = setup_logging(_cfg.log_folder)
     hide_storage_tree(_cfg.log_folder)
     _log.info("PageMind started. log=%s config=%s", log_path, _cfg.source_path)
+    shown = _cfg.hotkeys.display()
     _log.info(
-        "Hotkeys: screenshot=%s ocr=%s dismiss=%s model=%s fallbacks=%s timeout=%ss",
-        _cfg.hotkeys.screenshot,
-        _cfg.hotkeys.ocr,
-        _cfg.hotkeys.dismiss,
+        "Hotkeys: screenshot=%s ocr=%s dismiss=%s start=%s restart=%s model=%s fallbacks=%s timeout=%ss",
+        shown["screenshot"],
+        shown["ocr"],
+        shown["dismiss"],
+        shown["start"],
+        shown["restart"],
         _cfg.model,
         ",".join(_cfg.fallback_models),
         _cfg.request_timeout_seconds,

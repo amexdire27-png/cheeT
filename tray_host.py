@@ -30,10 +30,11 @@ def _bind_hotkeys() -> object | None:
         }
         listener = StrictHotKeys(mapping)
         listener.start()
+        shown = cfg.hotkeys.display()
         _log.info(
-            "Tray hotkeys: start=%s restart=%s",
-            cfg.hotkeys.start,
-            cfg.hotkeys.restart,
+            "Tray hotkeys: start=%s restart=%s (from config.json)",
+            shown["start"],
+            shown["restart"],
         )
         return listener
     except Exception:
