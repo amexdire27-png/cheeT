@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Optional
 
 import pyperclip
 
-from utils import AppError
+from utils import AbortError, AppError
 
 if TYPE_CHECKING:
     from ai import Analysis
@@ -499,7 +499,7 @@ def present_failed(message: str = STATUS_FAILED) -> None:
     show(message or STATUS_FAILED, duration_seconds=STATUS_SECONDS)
 
 
-def run_with_status(fn, *, timeout: float):
+def run_with_status(fn, *, timeout: float, cancelled=None):
     holder: dict = {}
 
     def _target() -> None:
@@ -517,6 +517,8 @@ def run_with_status(fn, *, timeout: float):
     analyzing = False
     while worker.is_alive():
         now = time.monotonic()
+        if cancelled is not None and cancelled.is_set():
+            raise AbortError()
         if now >= deadline:
             _log.warning("Request unfinished after %.1fs — Failed", timeout)
             raise AppError(
