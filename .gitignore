@@ -1,0 +1,21 @@
+# Secrets — never commit a live API key
+config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# Packaging
+build/
+dist/
+*.spec
+
+# Logs / local captures (the live tool stores these under %LOCALAPPDATA%)
+*.log
+*.png
