@@ -3,6 +3,12 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $TaskName = "PageMind"
 
+$Config = Join-Path $Root "config.json"
+$Example = Join-Path $Root "config.example.json"
+if (-not (Test-Path $Config) -and (Test-Path $Example)) {
+    Copy-Item $Example $Config
+}
+
 $PythonW = Join-Path $Root ".venv\Scripts\pythonw.exe"
 if (-not (Test-Path $PythonW)) {
     $cmd = Get-Command pythonw -ErrorAction SilentlyContinue
@@ -13,7 +19,7 @@ if (-not $PythonW -or -not (Test-Path $PythonW)) {
     if ($cmd) { $PythonW = $cmd.Source }
 }
 if (-not $PythonW) {
-    Write-Error "pythonw.exe not found. Install Python 3.11+ and tick 'Add python.exe to PATH'."
+    Write-Error "pythonw.exe not found. Run setup.cmd (or setup.ps1) first. Install Python 3.11+ and tick 'Add python.exe to PATH'."
 }
 
 $Tray = Join-Path $Root "tray_host.py"
