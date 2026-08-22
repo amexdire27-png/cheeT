@@ -4,6 +4,4 @@ pyperclip>=1.9.0
 requests>=2.32.3
 pywin32>=308
 Pillow>=10.4.0
-windows-toasts>=1.3.0
-winotify>=1.1.0
 pystray>=0.19.5
