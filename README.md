@@ -1,139 +1,154 @@
-# PageMind
+# PageMind (Sync Host)
 
-Invisible Windows copilot. Press a hotkey on any window — usually a browser — and a 5-second toast returns the answer from Google Gemini. No console, no tray icon, no taskbar button.
+Invisible Windows copilot. Press a hotkey on a window (usually a browser). Google Gemini answers in a toast, and **the same text is copied to the clipboard** (`Ctrl+V`).
 
-| Hotkey | Mode |
-|---|---|
-| `Ctrl+Alt+P` | Picture — screenshot the active window and ask Gemini |
-| `Ctrl+Alt+T` | Text — native text or screenshot OCR, then ask Gemini |
-| `Ctrl+Alt+X` | Dismiss — force-close any Sync Host toast immediately |
-| `Ctrl+Alt+Shift+G` | Start — start the host (same as overflow Start) |
-| `Ctrl+Alt+R` | Restart — stop then start the host (same as overflow Restart) |
+No console. No taskbar button. Overflow tray icon: **Sync Host**.
 
-Long answers are no longer copied by character count. Gemini classifies the page first:
+---
 
-| Page type | What you get |
-|---|---|
-| Short-answer (fill-in, one word, number, formula) | Full answer on the clipboard. Native toast: “Answer arrived”. |
-| Write-a-code | Full code on the clipboard. Same “arrived” toast. |
-| Both short-answer and code | Combined paste-ready solution on the clipboard. Same toast. |
-| True / False (or Yes / No) | `True` or `False` in a native Windows notification. |
-| Anything else (MCQ, explain, article, error…) | The answer in a native Windows notification. |
+## Apps you need to install
 
-## Requirements
+You only need these. Nothing else (no Git, no Visual Studio, no extra runtimes).
 
-- Windows 10/11
-- Python 3.11 or newer (install from python.org and enable **Add python.exe to PATH**)
-- A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
+| App | Why | How |
+|---|---|---|
+| **Windows 10 or 11** | This tool is Windows-only | Already on the PC |
+| **Python 3.11 or newer** | Runs the host and tray | `setup.cmd` installs **Python 3.12** with winget if it is missing. Or install yourself from [python.org](https://www.python.org/downloads/) and tick **Add python.exe to PATH** |
+| **A Gemini API key** | Talks to Google Gemini | Create a key at [Google AI Studio](https://aistudio.google.com/apikey) (browser). Not an installed app |
 
-## Setup
+Optional: **App Installer / winget** (already on most Windows 11 PCs) so setup can install Python for you.
+
+Do **not** install: Git, Node, Visual C++ Build Tools, Chrome (any browser is fine).
+
+---
+
+## Setup on a new PC (easy)
+
+1. Copy this whole folder onto the PC (USB, zip, whatever). Any path is fine.
+2. Get a Gemini API key: [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+3. Double-click **`setup.cmd`**
+4. If `config.json` opens in Notepad, paste the key into `"api_key"` and save. Then overflow **Sync Host → Start**.
+5. If the key was already in `config.json`, setup starts the host for you.
+
+That one script:
+
+- Unblocks the helper files
+- Installs Python if needed
+- Creates `.venv` and installs packages
+- Creates `config.json` from the example if missing
+- Registers the hidden logon tray icon
+- Puts **Sync Host** on the desktop (this **stops** the host)
+- Starts the overflow icon (and the host if a real key is present)
+
+No admin. Run it again any time; it is safe to repeat.
+
+PowerShell instead of double-click:
 
 ```powershell
-cd C:\Users\Gr_14\Documents\Fluffy
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-copy config.example.json config.json
+cd <this-folder>
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
-
-Open `config.json` and set `api_key`. Optionally set `backup_api_key` — PageMind switches to it if the first key is rejected or runs out of quota. You can also set `PAGEMIND_API_KEY` / `PAGEMIND_BACKUP_API_KEY` instead.
 
 `config.json` is gitignored. Do not commit a live key.
 
-If an API key was pasted into chat or a ticket, rotate it in AI Studio and put the new value only in `config.json`.
+---
 
-## Run in the background
+## Daily use
 
-Silent (no console):
+| Action | How |
+|---|---|
+| Start | Overflow `^` → **Sync Host** → **Start**, or the Start hotkey |
+| Restart | Overflow **Restart**, or the Restart hotkey |
+| Stop | Desktop **Sync Host** shortcut (tray icon stays so you can Start again) |
+| Picture | Screenshot hotkey (default `Ctrl+Alt+P`) |
+| Text | OCR / text hotkey (default `Ctrl+Alt+T`) |
+| Dismiss toast | Dismiss hotkey (default `Ctrl+Alt+X`) |
 
-```powershell
-wscript .\run_hidden.vbs
+1. Focus the page.
+2. Press Picture or Text.
+3. Read the toast, or paste with `Ctrl+V` (clipboard always matches the toast).
+
+After logon, the **Sync Host** icon comes back in the overflow. Start the host from there (or setup already started it this session).
+
+---
+
+## Shortcuts (`config.json`)
+
+All hotkeys are only in `config.json` → `hotkeys`. The host, tray, and setup read that file.
+
+```json
+"hotkeys": {
+  "screenshot": "Ctrl+Alt+P",
+  "ocr": "Ctrl+Alt+T",
+  "dismiss": "Ctrl+Alt+X",
+  "start": "Ctrl+Alt+Shift+G",
+  "restart": "Ctrl+Alt+R"
+}
 ```
 
-Or:
+`Ctrl+Alt+P` or `ctrl + alt + p` both work. Change what you want; the rest keep defaults. Save, then overflow **Restart**.
 
-```powershell
-pythonw .\main.py
-```
+| Key in config | Default | What it does |
+|---|---|---|
+| `screenshot` | `Ctrl+Alt+P` | Picture / screenshot → Gemini |
+| `ocr` | `Ctrl+Alt+T` | Text / OCR → Gemini |
+| `dismiss` | `Ctrl+Alt+X` | Close any Sync Host toast now |
+| `start` | `Ctrl+Alt+Shift+G` | Start the host |
+| `restart` | `Ctrl+Alt+R` | Stop, then start |
 
-Use `python .\main.py` only while debugging. Set `PAGEMIND_DEBUG=1` if you want the console to stay visible. Otherwise PageMind hides it as soon as it starts.
+---
 
-A second instance exits immediately. Logs go to:
+## Other `config.json` settings
 
-`%LOCALAPPDATA%\.cache\syshelper\logs\pagemind.log`
+| Key | Meaning |
+|---|---|
+| `api_key` | Gemini API key |
+| `backup_api_key` | Used if the first key is rejected or out of quota |
+| `model` | Default `gemini-flash-lite-latest` |
+| `fallback_models` | Tried if the main model fails |
+| `system_prompt` | How Gemini answers |
+| `notification_duration_seconds` | How long the answer toast stays |
+| `request_timeout_seconds` | HTTP timeout |
+| `screenshot_folder` | Saved PNGs (never auto-deleted) |
+| `log_folder` | Rotating log file |
 
-Screenshots go to:
+You can set `PAGEMIND_API_KEY` / `PAGEMIND_BACKUP_API_KEY` instead of putting keys in the file.
 
-`%LOCALAPPDATA%\.cache\syshelper\img\`
+---
 
-Those folders are created on first run and marked hidden. Nothing is deleted from `img`.
+## Files that matter
 
-## Start automatically with Windows
+| File | Role |
+|---|---|
+| `setup.cmd` | Double-click setup on a new PC |
+| `config.json` | Your key and hotkeys (created on first setup) |
+| `install_startup.ps1` | Tray at logon + desktop Stop shortcut |
+| `uninstall_startup.ps1` | Removes the logon task and stops tray/host |
+| Desktop **Sync Host** | Stops the host only |
+| Overflow **Sync Host** | Start / Restart |
 
-Recommended — a hidden logon task (no admin):
+Logs: `%LOCALAPPDATA%\.cache\syshelper\logs\pagemind.log`  
+Screenshots: `%LOCALAPPDATA%\.cache\syshelper\img\`
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install_startup.ps1
-```
+---
 
-Remove it with:
+## If something fails
+
+| Problem | Fix |
+|---|---|
+| `python` not found | Run `setup.cmd` again, or install from python.org with **Add python.exe to PATH**, new window, setup again |
+| winget / App Installer missing | Install Python yourself from python.org, then `setup.cmd` |
+| Packages fail to install | Need internet. Then `setup.cmd` again |
+| No toasts / hotkeys dead | Overflow **Start**. Check `api_key` in `config.json` |
+| Gemini 503 | Wait a few seconds and retry |
+| Need a clean stop | Desktop **Sync Host**, or `uninstall_startup.ps1` |
+
+---
+
+## Uninstall autostart
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\uninstall_startup.ps1
 ```
 
-Alternative — Startup folder:
-
-1. Press `Win+R`, type `shell:startup`, press Enter.
-2. Create a shortcut to `run_hidden.vbs` in that folder.
-
-If toasts say Gemini is temporarily unavailable (`HTTP 503`), wait a few seconds and retry, or set `"model"` in `config.json` to `gemini-2.0-flash`.
-
-## Using it
-
-1. Focus the page or app you care about.
-2. Press `Ctrl+Alt+P` (picture / screenshot) or `Ctrl+Alt+T` (text / OCR).
-3. A native Windows notification appears (same style as other local toasts).
-4. True/False and other glanceable answers show in that notification.
-5. Short-answer and code questions copy to the clipboard; the toast only says the answer arrived — paste with `Ctrl+V`.
-
-## Configuration
-
-All of this lives in `config.json`:
-
-| Key | Meaning |
-|---|---|
-| `api_key` | Gemini API key |
-| `backup_api_key` | Second Gemini key used when the first is rejected or out of quota |
-| `model` | Default `gemini-flash-latest` |
-| `hotkeys.screenshot` / `hotkeys.ocr` / `hotkeys.dismiss` / `hotkeys.start` / `hotkeys.restart` | pynput-style hotkeys |
-| `system_prompt` | How Gemini answers |
-| `notification_duration_seconds` | Toast lifetime (short ≈ 5 seconds) |
-| `screenshot_folder` | Permanent PNG storage |
-| `log_folder` | Rotating log file |
-| `request_timeout_seconds` | HTTP timeout |
-
-## Package as a single .exe
-
-```powershell
-pip install pyinstaller
-pyinstaller --noconsole --onefile --name PageMind `
-  --hidden-import=pynput.keyboard._win32 `
-  --hidden-import=pynput.mouse._win32 `
-  --hidden-import=win32timezone `
-  --hidden-import=windows_toasts `
-  --hidden-import=winotify `
-  main.py
-```
-
-Copy `config.json` next to `dist\PageMind.exe`. Point the logon task at the exe instead of `pythonw`.
-
-## Stop it
-
-Task Manager → `pythonw.exe` (or `PageMind.exe`) → End task.
-
-If you used the installer:
-
-```powershell
-Stop-ScheduledTask -TaskName PageMind
-```
+Then delete this folder if you want it gone.
