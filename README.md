@@ -6,6 +6,9 @@ Invisible Windows copilot. Press a hotkey on any window — usually a browser �
 |---|---|
 | `Ctrl+Alt+P` | Picture — screenshot the active window and ask Gemini |
 | `Ctrl+Alt+T` | Text — native text or screenshot OCR, then ask Gemini |
+| `Ctrl+Alt+X` | Dismiss — force-close any Sync Host toast immediately |
+| `Ctrl+Alt+Shift+G` | Start — start the host (same as overflow Start) |
+| `Ctrl+Alt+R` | Restart — stop then start the host (same as overflow Restart) |
 
 Long answers are no longer copied by character count. Gemini classifies the page first:
 
@@ -103,7 +106,7 @@ All of this lives in `config.json`:
 | `api_key` | Gemini API key |
 | `backup_api_key` | Second Gemini key used when the first is rejected or out of quota |
 | `model` | Default `gemini-flash-latest` |
-| `hotkeys.screenshot` / `hotkeys.ocr` | pynput-style hotkeys, e.g. `<ctrl>+<alt>+p` |
+| `hotkeys.screenshot` / `hotkeys.ocr` / `hotkeys.dismiss` / `hotkeys.start` / `hotkeys.restart` | pynput-style hotkeys |
 | `system_prompt` | How Gemini answers |
 | `notification_duration_seconds` | Toast lifetime (short ≈ 5 seconds) |
 | `screenshot_folder` | Permanent PNG storage |
