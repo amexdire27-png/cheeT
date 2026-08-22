@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import re
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -15,7 +16,7 @@ import requests
 from PIL import Image
 
 from config import Config
-from utils import AppError, redact
+from utils import AbortError, AppError, redact
 
 _log = logging.getLogger("pagemind.ai")
 
@@ -253,25 +254,55 @@ class GeminiClient:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self._active_key = ""
-        self._session = requests.Session()
-        self._session.trust_env = False
-        self._session.headers.update({"Content-Type": "application/json"})
+        self._cancelled = threading.Event()
+        self._lock = threading.Lock()
+        self._session = self._new_session()
+
+    def _new_session(self) -> requests.Session:
+        session = requests.Session()
+        session.trust_env = False
+        session.headers.update({"Content-Type": "application/json"})
         adapter = requests.adapters.HTTPAdapter(
             pool_connections=4, pool_maxsize=4, max_retries=0
         )
-        self._session.mount("https://", adapter)
-        self._session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
+
+    def reset_cancel(self) -> None:
+        self._cancelled.clear()
+        with self._lock:
+            try:
+                closed = getattr(self._session, "closed", False)
+            except Exception:
+                closed = True
+            if closed:
+                self._session = self._new_session()
+
+    def abort(self) -> None:
+        """Drop the in-flight HTTP request so Abort can return immediately."""
+        self._cancelled.set()
+        with self._lock:
+            try:
+                self._session.close()
+            except Exception:
+                pass
+            self._session = self._new_session()
+
+    @property
+    def cancelled(self) -> threading.Event:
+        return self._cancelled
 
     def close(self) -> None:
-        self._session.close()
+        with self._lock:
+            self._session.close()
+
+    def _raise_if_aborted(self) -> None:
+        if self._cancelled.is_set():
+            raise AbortError()
 
     def _keys(self) -> list[str]:
-        keys: list[str] = []
-        for key in (self.cfg.api_key, self.cfg.backup_api_key):
-            trimmed = (key or "").strip()
-            if trimmed and trimmed not in keys:
-                keys.append(trimmed)
-        return keys
+        return list(self.cfg.api_keys)
 
     def _ordered_keys(self) -> list[str]:
         keys = self._keys()
@@ -280,9 +311,10 @@ class GeminiClient:
         return keys
 
     def _key_label(self, key: str) -> str:
-        if key == self.cfg.api_key:
-            return "primary"
-        return "backup"
+        try:
+            return f"key{self.cfg.api_keys.index(key) + 1}"
+        except ValueError:
+            return "key"
 
     def _apply_key(self, key: str) -> None:
         self._session.headers["X-goog-api-key"] = key
@@ -330,6 +362,7 @@ class GeminiClient:
         dropped_json_mime = False
 
         for key_index, key in enumerate(keys):
+            self._raise_if_aborted()
             self._apply_key(key)
             params = {"key": key}
             label = self._key_label(key)
@@ -337,7 +370,9 @@ class GeminiClient:
             switch_key = False
 
             for model in self._models():
+                self._raise_if_aborted()
                 for attempt in range(3):
+                    self._raise_if_aborted()
                     _log.info(
                         "Gemini request key=%s model=%s attempt=%s",
                         label,
@@ -345,17 +380,21 @@ class GeminiClient:
                         attempt + 1,
                     )
                     try:
-                        response = self._session.post(
+                        with self._lock:
+                            session = self._session
+                        response = session.post(
                             self._url(model),
                             params=params,
                             json=body,
                             timeout=timeout,
                         )
                     except requests.Timeout as exc:
+                        self._raise_if_aborted()
                         last_error = exc
                         _log.warning("%s timed out (attempt %s)", model, attempt + 1)
                         break
                     except requests.RequestException as exc:
+                        self._raise_if_aborted()
                         last_error = exc
                         _log.warning("Network error on %s: %s", model, exc)
                         time.sleep(0.35 * (attempt + 1))
@@ -367,7 +406,7 @@ class GeminiClient:
                             response.status_code, response.text
                         ):
                             _log.warning(
-                                "%s HTTP %s on %s key — switching to backup",
+                                "%s HTTP %s on %s — switching to the next key",
                                 model,
                                 response.status_code,
                                 label,
@@ -414,7 +453,7 @@ class GeminiClient:
                             response.status_code, response.text
                         ):
                             _log.warning(
-                                "%s key rejected (HTTP %s) — switching to backup",
+                                "%s rejected (HTTP %s) — switching to the next key",
                                 label,
                                 response.status_code,
                             )
