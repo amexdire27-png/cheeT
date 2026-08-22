@@ -462,17 +462,15 @@ def show(title: str, body: str = "", *, duration_seconds: float = ANSWER_SECONDS
 
 def present_analysis(result: "Analysis", *, duration: int) -> None:
     seconds = duration if duration else ANSWER_SECONDS
-    if result.copy_to_clipboard:
-        if _copy(result.answer):
-            _log.info(
-                "Copied %s-char %s answer to clipboard",
-                len(result.answer),
-                ",".join(result.types) or "unknown",
-            )
-            show(CLIPBOARD_TITLE, CLIPBOARD_BODY, duration_seconds=seconds)
-            return
-        _log.warning("Clipboard copy failed; showing the answer in the toast")
-    text = result.answer.strip()
+    text = (result.answer or "").strip() or "No answer"
+    if _copy(text):
+        _log.info(
+            "Copied %s-char %s answer to clipboard",
+            len(text),
+            ",".join(result.types) or "unknown",
+        )
+    else:
+        _log.warning("Clipboard copy failed")
     if len(text) <= 48:
         show(text, duration_seconds=seconds)
     else:
