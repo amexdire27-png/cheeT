@@ -72,6 +72,7 @@ WM_PAINT = 0x000F
 WM_TIMER = 0x0113
 WM_LBUTTONUP = 0x0202
 WM_CLOSE = 0x0010
+SW_HIDE = 0
 SW_SHOWNOACTIVATE = 4
 SWP_NOACTIVATE = 0x0010
 SWP_SHOWWINDOW = 0x0040
@@ -99,6 +100,7 @@ WNDPROC = ctypes.WINFUNCTYPE(
     wintypes.WPARAM,
     wintypes.LPARAM,
 )
+WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
 
 class PAINTSTRUCT(ctypes.Structure):
@@ -344,6 +346,25 @@ def _measure(body: str, width: int, font: int) -> int:
 def dismiss() -> None:
     hwnd = _hwnd
     if hwnd:
+        user32.ShowWindow(hwnd, SW_HIDE)
+        user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
+
+
+def dismiss_all() -> None:
+    """Force-close every Sync Host toast, including helper-process toasts."""
+    dismiss()
+    found: list[int] = []
+
+    def _enum(hwnd: int, _lparam: int) -> bool:
+        buf = ctypes.create_unicode_buffer(64)
+        if user32.GetClassNameW(hwnd, buf, 64) and buf.value == CLASS_NAME:
+            found.append(hwnd)
+        return True
+
+    callback = WNDENUMPROC(_enum)
+    user32.EnumWindows(callback, 0)
+    for hwnd in found:
+        user32.ShowWindow(hwnd, SW_HIDE)
         user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
 
 
