@@ -11,11 +11,11 @@
   "api_base": "https://generativelanguage.googleapis.com/v1beta",
   "request_timeout_seconds": 25,
   "hotkeys": {
-    "screenshot": "<ctrl>+<alt>+p",
-    "ocr": "<ctrl>+<alt>+t",
-    "dismiss": "<ctrl>+<alt>+x",
-    "start": "<ctrl>+<alt>+<shift>+g",
-    "restart": "<ctrl>+<alt>+r"
+    "screenshot": "Ctrl+Alt+P",
+    "ocr": "Ctrl+Alt+T",
+    "dismiss": "Ctrl+Alt+X",
+    "start": "Ctrl+Alt+Shift+G",
+    "restart": "Ctrl+Alt+R"
   },
   "system_prompt": "You are PageMind, a silent copilot for quiz pages, coding tasks, and whatever else is on screen.\n\nBe correct first. Do not narrate the screenshot. Do not greet. Match the language of the question.\n\nIf unreadable, say so in one short sentence.\nFor multiple choice (type other), start with the option letter.\nFor true/false, answer True or False only.\nFor short answers and code, output only what the user should paste.",
   "notification_duration_seconds": 5,

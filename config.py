@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,6 +28,15 @@ class Hotkeys:
     dismiss: str
     start: str
     restart: str
+
+    def display(self) -> dict[str, str]:
+        return {
+            "screenshot": format_hotkey(self.screenshot),
+            "ocr": format_hotkey(self.ocr),
+            "dismiss": format_hotkey(self.dismiss),
+            "start": format_hotkey(self.start),
+            "restart": format_hotkey(self.restart),
+        }
 
 
 @dataclass(frozen=True)
@@ -54,29 +64,79 @@ def _as_int(value: Any, default: int, *, minimum: int = 1, maximum: int = 120) -
     return max(minimum, min(maximum, number))
 
 
+HOTKEY_DEFAULTS = {
+    "screenshot": "Ctrl+Alt+P",
+    "ocr": "Ctrl+Alt+T",
+    "dismiss": "Ctrl+Alt+X",
+    "start": "Ctrl+Alt+Shift+G",
+    "restart": "Ctrl+Alt+R",
+}
+
+_MOD_NAMES = {
+    "ctrl": "<ctrl>",
+    "control": "<ctrl>",
+    "alt": "<alt>",
+    "option": "<alt>",
+    "shift": "<shift>",
+    "win": "<cmd>",
+    "windows": "<cmd>",
+    "cmd": "<cmd>",
+    "super": "<cmd>",
+}
+_MOD_LABELS = {
+    "ctrl": "Ctrl",
+    "alt": "Alt",
+    "shift": "Shift",
+    "cmd": "Win",
+}
+
+
 def _normalize_hotkey(raw: str, fallback: str) -> str:
-    """Accept both '<ctrl>+<shift>+s' and 'ctrl+shift+s'."""
-    text = (raw or "").strip().lower()
+    """Accept 'Ctrl+Alt+P', 'ctrl+alt+p', or '<ctrl>+<alt>+p'."""
+    text = re.sub(r"\s+", "", (raw or "").strip())
     if not text:
         return fallback
-    if "<" in text:
-        return text
-    parts = [p.strip() for p in text.replace("-", "+").split("+") if p.strip()]
+    text = text.replace("-", "+")
+    parts: list[str] = []
+    for chunk in text.split("+"):
+        token = chunk.strip().lower().strip("<>")
+        if not token:
+            continue
+        if token in _MOD_NAMES:
+            parts.append(_MOD_NAMES[token])
+        elif len(token) == 1:
+            parts.append(token)
+        else:
+            parts.append(f"<{token}>")
     if not parts:
         return fallback
-    mapped = []
-    for part in parts:
-        if part in {"ctrl", "control"}:
-            mapped.append("<ctrl>")
-        elif part in {"shift"}:
-            mapped.append("<shift>")
-        elif part in {"alt", "option"}:
-            mapped.append("<alt>")
-        elif part in {"win", "windows", "cmd", "super"}:
-            mapped.append("<cmd>")
+    return "+".join(parts)
+
+
+def format_hotkey(spec: str) -> str:
+    """Turn an internal combo into a readable Ctrl+Alt+P label."""
+    labels: list[str] = []
+    for chunk in (spec or "").split("+"):
+        token = chunk.strip().lower().strip("<>")
+        if not token:
+            continue
+        if token in _MOD_LABELS:
+            labels.append(_MOD_LABELS[token])
+        elif len(token) == 1:
+            labels.append(token.upper())
         else:
-            mapped.append(part)
-    return "+".join(mapped)
+            labels.append(token[:1].upper() + token[1:])
+    return "+".join(labels) if labels else spec
+
+
+def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge_dicts(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
 
 
 def config_path() -> Path:
@@ -118,10 +178,11 @@ def load_config() -> Config:
         except json.JSONDecodeError:
             _log.warning("config.example.json is invalid; using built-in defaults")
 
-    merged = {**example, **data}
+    merged = _merge_dicts(example, data)
     hot = merged.get("hotkeys") or {}
     if not isinstance(hot, dict):
         hot = {}
+    hot = {**HOTKEY_DEFAULTS, **{str(k): v for k, v in hot.items()}}
 
     api_key = str(merged.get("api_key") or "").strip()
     env_key = os.environ.get("PAGEMIND_API_KEY", "").strip()
@@ -139,14 +200,15 @@ def load_config() -> Config:
     if backup_api_key and backup_api_key == api_key:
         backup_api_key = ""
 
-    screenshot = _normalize_hotkey(
-        str(hot.get("screenshot") or ""),
-        "<ctrl>+<alt>+p",
-    )
-    ocr = _normalize_hotkey(str(hot.get("ocr") or ""), "<ctrl>+<alt>+t")
-    dismiss = _normalize_hotkey(str(hot.get("dismiss") or ""), "<ctrl>+<alt>+x")
-    start = _normalize_hotkey(str(hot.get("start") or ""), "<ctrl>+<alt>+<shift>+g")
-    restart = _normalize_hotkey(str(hot.get("restart") or ""), "<ctrl>+<alt>+r")
+    def _combo(name: str) -> str:
+        default = _normalize_hotkey(HOTKEY_DEFAULTS[name], "")
+        return _normalize_hotkey(str(hot.get(name) or ""), default)
+
+    screenshot = _combo("screenshot")
+    ocr = _combo("ocr")
+    dismiss = _combo("dismiss")
+    start = _combo("start")
+    restart = _combo("restart")
 
     fallbacks_raw = merged.get("fallback_models")
     fallbacks: list[str] = []
