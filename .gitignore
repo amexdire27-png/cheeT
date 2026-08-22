@@ -19,3 +19,7 @@ dist/
 # Logs / local captures (the live tool stores these under %LOCALAPPDATA%)
 *.log
 *.png
+
+# Local copies / zip dumps
+*.rar
+*.zip
