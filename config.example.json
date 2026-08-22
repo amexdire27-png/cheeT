@@ -1,6 +1,8 @@
 {
-  "api_key": "YOUR_GEMINI_API_KEY",
-  "backup_api_key": "YOUR_BACKUP_GEMINI_API_KEY",
+  "api_keys": [
+    "YOUR_GEMINI_API_KEY",
+    "YOUR_SECOND_GEMINI_API_KEY"
+  ],
   "model": "gemini-flash-lite-latest",
   "fallback_models": [
     "gemini-3.6-flash",
@@ -14,6 +16,7 @@
     "screenshot": "Ctrl+Alt+P",
     "ocr": "Ctrl+Alt+T",
     "dismiss": "Ctrl+Alt+X",
+    "abort": "Ctrl+Alt+Z",
     "start": "Ctrl+Alt+Shift+G",
     "restart": "Ctrl+Alt+R"
   },

@@ -26,6 +26,7 @@ class Hotkeys:
     screenshot: str
     ocr: str
     dismiss: str
+    abort: str
     start: str
     restart: str
 
@@ -34,6 +35,7 @@ class Hotkeys:
             "screenshot": format_hotkey(self.screenshot),
             "ocr": format_hotkey(self.ocr),
             "dismiss": format_hotkey(self.dismiss),
+            "abort": format_hotkey(self.abort),
             "start": format_hotkey(self.start),
             "restart": format_hotkey(self.restart),
         }
@@ -41,8 +43,7 @@ class Hotkeys:
 
 @dataclass(frozen=True)
 class Config:
-    api_key: str
-    backup_api_key: str
+    api_keys: tuple[str, ...]
     model: str
     fallback_models: tuple[str, ...]
     api_base: str
@@ -54,6 +55,14 @@ class Config:
     screenshot_folder: Path
     log_folder: Path
     source_path: Path
+
+    @property
+    def api_key(self) -> str:
+        return self.api_keys[0] if self.api_keys else ""
+
+    @property
+    def backup_api_key(self) -> str:
+        return self.api_keys[1] if len(self.api_keys) > 1 else ""
 
 
 def _as_int(value: Any, default: int, *, minimum: int = 1, maximum: int = 120) -> int:
@@ -68,6 +77,7 @@ HOTKEY_DEFAULTS = {
     "screenshot": "Ctrl+Alt+P",
     "ocr": "Ctrl+Alt+T",
     "dismiss": "Ctrl+Alt+X",
+    "abort": "Ctrl+Alt+Z",
     "start": "Ctrl+Alt+Shift+G",
     "restart": "Ctrl+Alt+R",
 }
@@ -147,6 +157,36 @@ def example_path() -> Path:
     return app_dir() / "config.example.json"
 
 
+def _clean_key(raw: Any) -> str:
+    text = str(raw or "").strip()
+    if not text or text.upper().startswith("YOUR_"):
+        return ""
+    return text
+
+
+def _collect_api_keys(merged: dict[str, Any]) -> tuple[str, ...]:
+    found: list[str] = []
+
+    def _add(value: Any) -> None:
+        if isinstance(value, list):
+            for item in value:
+                _add(item)
+            return
+        key = _clean_key(value)
+        if key and key not in found:
+            found.append(key)
+
+    _add(merged.get("api_keys"))
+    _add(merged.get("api_key"))
+    _add(merged.get("backup_api_key"))
+    env_keys = os.environ.get("PAGEMIND_API_KEYS", "")
+    if env_keys:
+        _add([part.strip() for part in env_keys.split(",")])
+    _add(os.environ.get("PAGEMIND_API_KEY", ""))
+    _add(os.environ.get("PAGEMIND_BACKUP_API_KEY", ""))
+    return tuple(found)
+
+
 def ensure_config_file() -> Path:
     """Create config.json from the example on first run."""
     path = config_path()
@@ -183,22 +223,7 @@ def load_config() -> Config:
     if not isinstance(hot, dict):
         hot = {}
     hot = {**HOTKEY_DEFAULTS, **{str(k): v for k, v in hot.items()}}
-
-    api_key = str(merged.get("api_key") or "").strip()
-    env_key = os.environ.get("PAGEMIND_API_KEY", "").strip()
-    if env_key:
-        api_key = env_key
-    if api_key.upper().startswith("YOUR_"):
-        api_key = ""
-
-    backup_api_key = str(merged.get("backup_api_key") or "").strip()
-    env_backup = os.environ.get("PAGEMIND_BACKUP_API_KEY", "").strip()
-    if env_backup:
-        backup_api_key = env_backup
-    if backup_api_key.upper().startswith("YOUR_"):
-        backup_api_key = ""
-    if backup_api_key and backup_api_key == api_key:
-        backup_api_key = ""
+    api_keys = _collect_api_keys(merged)
 
     def _combo(name: str) -> str:
         default = _normalize_hotkey(HOTKEY_DEFAULTS[name], "")
@@ -207,6 +232,7 @@ def load_config() -> Config:
     screenshot = _combo("screenshot")
     ocr = _combo("ocr")
     dismiss = _combo("dismiss")
+    abort = _combo("abort")
     start = _combo("start")
     restart = _combo("restart")
 
@@ -226,8 +252,7 @@ def load_config() -> Config:
         ]
 
     cfg = Config(
-        api_key=api_key,
-        backup_api_key=backup_api_key,
+        api_keys=api_keys,
         model=str(merged.get("model") or "gemini-flash-lite-latest").strip(),
         fallback_models=tuple(fallbacks),
         api_base=str(
@@ -241,6 +266,7 @@ def load_config() -> Config:
             screenshot=screenshot,
             ocr=ocr,
             dismiss=dismiss,
+            abort=abort,
             start=start,
             restart=restart,
         ),
