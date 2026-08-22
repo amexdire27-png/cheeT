@@ -3,6 +3,9 @@ PageMind — invisible Windows copilot.
 
 Ctrl+Alt+P  screenshot the active window (prefer browser) → Gemini → toast
 Ctrl+Alt+T  extract text / OCR the active window → Gemini → toast
+Ctrl+Alt+X  force-close any Sync Host toast immediately
+Ctrl+Alt+Shift+G  start the host
+Ctrl+Alt+R  restart the host
 """
 
 from __future__ import annotations
@@ -12,9 +15,8 @@ import sys
 import threading
 import time
 
-from pynput import keyboard
-
 import ai
+import hotkeys
 import capture
 import notify
 from config import Config, load_config
@@ -109,6 +111,11 @@ def _on_ocr() -> None:
     notify.present_analysis(result, duration=_cfg.notification_duration_seconds)
 
 
+def _on_dismiss() -> None:
+    notify.dismiss_all()
+    _log.info("Toasts force-dismissed")
+
+
 def main() -> int:
     global _client, _cfg
     set_dpi_aware()
@@ -143,9 +150,10 @@ def main() -> int:
     hide_storage_tree(_cfg.log_folder)
     _log.info("PageMind started. log=%s config=%s", log_path, _cfg.source_path)
     _log.info(
-        "Hotkeys: screenshot=%s ocr=%s model=%s fallbacks=%s timeout=%ss",
+        "Hotkeys: screenshot=%s ocr=%s dismiss=%s model=%s fallbacks=%s timeout=%ss",
         _cfg.hotkeys.screenshot,
         _cfg.hotkeys.ocr,
+        _cfg.hotkeys.dismiss,
         _cfg.model,
         ",".join(_cfg.fallback_models),
         _cfg.request_timeout_seconds,
@@ -165,10 +173,11 @@ def main() -> int:
     mapping = {
         _cfg.hotkeys.screenshot: lambda: _run_job("screenshot", _on_screenshot),
         _cfg.hotkeys.ocr: lambda: _run_job("ocr", _on_ocr),
+        _cfg.hotkeys.dismiss: _on_dismiss,
     }
 
     try:
-        with keyboard.GlobalHotKeys(mapping) as listener:
+        with hotkeys.StrictHotKeys(mapping) as listener:
             listener.join()
     except KeyboardInterrupt:
         _log.info("Stopped by KeyboardInterrupt")
