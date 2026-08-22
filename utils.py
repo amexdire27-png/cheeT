@@ -198,3 +198,10 @@ class AppError(Exception):
     def __init__(self, message: str, *, user_message: Optional[str] = None):
         super().__init__(message)
         self.user_message = user_message or message
+
+
+class AbortError(AppError):
+    """User cancelled an in-flight capture or Gemini request."""
+
+    def __init__(self, message: str = "Aborted"):
+        super().__init__(message, user_message="Aborted")
