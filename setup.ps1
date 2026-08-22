@@ -80,6 +80,7 @@ function Show-Hotkeys {
         Write-Host "  Picture  $($h.screenshot)"
         Write-Host "  Text     $($h.ocr)"
         Write-Host "  Dismiss  $($h.dismiss)"
+        Write-Host "  Abort    $($h.abort)"
         Write-Host "  Start    $($h.start)"
         Write-Host "  Restart  $($h.restart)"
     } catch {
@@ -91,8 +92,17 @@ function Test-ApiKey([string]$ConfigPath) {
     if (-not (Test-Path $ConfigPath)) { return $false }
     try {
         $cfg = Get-Content $ConfigPath -Raw | ConvertFrom-Json
-        $key = [string]$cfg.api_key
-        return ($key.Length -gt 8 -and -not $key.ToUpper().StartsWith("YOUR_"))
+        $keys = @()
+        if ($cfg.api_keys) { $keys += @($cfg.api_keys) }
+        if ($cfg.api_key) { $keys += [string]$cfg.api_key }
+        if ($cfg.backup_api_key) { $keys += [string]$cfg.backup_api_key }
+        foreach ($key in $keys) {
+            $text = [string]$key
+            if ($text.Length -gt 8 -and -not $text.ToUpper().StartsWith("YOUR_")) {
+                return $true
+            }
+        }
+        return $false
     } catch {
         return $false
     }
@@ -162,7 +172,7 @@ if (Test-ApiKey $Config) {
     & wscript.exe //B //Nologo (Join-Path $Root "run_hidden.vbs")
     Write-Host "Host started."
 } else {
-    Write-Host "No API key yet. Opening config.json — paste api_key, save, then overflow Start."
+    Write-Host "No API key yet. Opening config.json — paste keys into api_keys, save, then overflow Start."
     Start-Process notepad.exe $Config
 }
 
