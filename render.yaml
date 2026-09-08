@@ -9,3 +9,5 @@ services:
     envVars:
       - key: HOST
         value: 0.0.0.0
+      - key: RESEND_API_KEY
+        sync: false

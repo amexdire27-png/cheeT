@@ -1,5 +1,8 @@
 # Secrets — never commit a live API key
 config.json
+.env
+*.env
+site/.env
 
 # Python
 __pycache__/
@@ -11,11 +14,6 @@ env/
 *.egg-info/
 .pytest_cache/
 .cursor/
-
-# Packaging
-build/
-dist/
-*.spec
 
 # Packaging
 build/
