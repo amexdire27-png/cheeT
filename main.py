@@ -1,5 +1,5 @@
 """
-PageMind — invisible Windows copilot.
+PageMind — Windows on-screen assistant (cheeT1).
 
 Hotkeys come from config.json (hotkeys.*). Edit that file, then Restart.
 """
@@ -69,7 +69,11 @@ def _run_job(kind: str, fn) -> None:
         except AppError as exc:
             _log.warning("%s failed: %s", kind, exc)
             notify.dismiss_status()
-            notify.present_failed()
+            text = (exc.user_message or "Failed").strip() or "Failed"
+            notify.present_error(
+                text,
+                duration=max(3, int(_cfg.notification_duration_seconds) if _cfg else 5),
+            )
         except Exception:
             _log.exception("%s crashed", kind)
             notify.dismiss_status()
@@ -181,7 +185,7 @@ def main() -> int:
     if not _cfg.api_keys:
         _log.error("No API key configured")
         notify.present_error(
-            "Add Gemini API keys in config.json",
+            "Add Gemini API keys in cheeT1",
             duration=_cfg.notification_duration_seconds,
         )
     else:

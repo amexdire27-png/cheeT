@@ -1,5 +1,5 @@
 @echo off
-title Sync Host setup
+title cheeT1 setup
 cd /d "%~dp0"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup.ps1"
 if errorlevel 1 (

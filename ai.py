@@ -130,21 +130,21 @@ def _extract_text(payload: dict[str, Any]) -> str:
     if block:
         raise AppError(
             f"Gemini blocked the prompt ({block})",
-            user_message="Gemini declined this screen",
+            user_message="Failed",
         )
 
     candidates = payload.get("candidates") or []
     if not candidates:
         raise AppError(
             "Gemini returned no candidates",
-            user_message="Gemini returned an empty answer",
+            user_message="Failed",
         )
 
     finish = (candidates[0] or {}).get("finishReason")
     if finish in {"SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT"}:
         raise AppError(
             f"Gemini stopped ({finish})",
-            user_message="Gemini declined this screen",
+            user_message="Failed",
         )
 
     parts = ((candidates[0].get("content") or {}).get("parts")) or []
@@ -152,7 +152,7 @@ def _extract_text(payload: dict[str, Any]) -> str:
     if not text:
         raise AppError(
             "Gemini returned empty text",
-            user_message="Gemini returned an empty answer",
+            user_message="Failed",
         )
     return text
 
@@ -205,7 +205,7 @@ def _parse_analysis(raw: str) -> Analysis:
     if not answer:
         raise AppError(
             "Gemini JSON had no answer",
-            user_message="Gemini returned an empty answer",
+            user_message="Failed",
         )
     # Code answers sometimes still arrive wrapped in fences.
     if "code" in types:
@@ -216,29 +216,29 @@ def _parse_analysis(raw: str) -> Analysis:
 
 def _user_error(status: int, body: str) -> AppError:
     lowered = body.lower()
+    if status == 429 or "resource_exhausted" in lowered or "quota" in lowered:
+        return AppError(
+            f"Gemini rate limit HTTP {status}",
+            user_message="API limit reached",
+        )
     if status == 401 or status == 403 or "api key" in lowered or "permission" in lowered:
         return AppError(
             f"Gemini auth error HTTP {status}",
-            user_message="Gemini API key was rejected",
+            user_message="Failed",
         )
     if status == 404:
         return AppError(
             f"Gemini model not found HTTP {status}",
-            user_message="Gemini model was not found",
-        )
-    if status == 429 or "resource_exhausted" in lowered or "quota" in lowered:
-        return AppError(
-            f"Gemini rate limit HTTP {status}",
-            user_message="Gemini is rate-limited — try again shortly",
+            user_message="Failed",
         )
     if status >= 500:
         return AppError(
             f"Gemini server error HTTP {status}",
-            user_message="Gemini is temporarily unavailable",
+            user_message="Failed",
         )
     return AppError(
         f"Gemini HTTP {status}: {body[:300]}",
-        user_message="Gemini request failed",
+        user_message="Failed",
     )
 
 
@@ -335,7 +335,7 @@ class GeminiClient:
         if not keys:
             raise AppError(
                 "Missing API key",
-                user_message="Add your Gemini API key in config.json",
+                user_message="Add your Gemini API key in cheeT1",
             )
 
         generation = {
@@ -490,7 +490,8 @@ class GeminiClient:
                 continue
 
         if isinstance(last_error, AppError):
-            last_error.user_message = "Failed"
+            if last_error.user_message != "API limit reached":
+                last_error.user_message = "Failed"
             raise last_error
         raise AppError(
             f"Gemini failed: {last_error}",

@@ -10,6 +10,11 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
+if sys.platform == "win32":
+    from ctypes import wintypes
+else:
+    wintypes = None  # type: ignore[misc, assignment]
+
 kernel32 = ctypes.windll.kernel32
 user32 = ctypes.windll.user32
 
@@ -18,15 +23,32 @@ FILE_ATTRIBUTE_SYSTEM = 0x4
 ERROR_ALREADY_EXISTS = 183
 MUTEX_NAME = "Local\\PageMindSingleton_v1"
 TRAY_MUTEX_NAME = "Local\\PageMindTray_v1"
+SETTINGS_MUTEX_NAME = "Local\\CheeT1Settings_v1"
+_SYNCHRONIZE = 0x00100000
 
 _log = logging.getLogger("pagemind")
 _mutex_handle: Optional[int] = None
 _tray_mutex_handle: Optional[int] = None
+_settings_mutex_handle: Optional[int] = None
+
+
+def is_frozen() -> bool:
+    return bool(getattr(sys, "frozen", False))
 
 
 def app_dir() -> Path:
-    """Directory containing the running script or frozen executable."""
-    if getattr(sys, "frozen", False):
+    """Writable install folder. config.json lives here."""
+    if is_frozen():
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def resource_dir() -> Path:
+    """Bundled files (assets, example config) when frozen; otherwise the repo."""
+    if is_frozen():
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            return Path(meipass)
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent
 
@@ -97,6 +119,16 @@ def set_dpi_aware() -> None:
         pass
 
 
+def bind_app_id(aumid: str) -> None:
+    """Stop Windows grouping this process with python.exe on the taskbar."""
+    if sys.platform != "win32":
+        return
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(aumid)
+    except OSError:
+        pass
+
+
 def _acquire_named_mutex(name: str) -> tuple[bool, Optional[int]]:
     kernel32.SetLastError(0)
     handle = kernel32.CreateMutexW(None, False, name)
@@ -121,6 +153,47 @@ def acquire_tray_singleton() -> bool:
     ok, handle = _acquire_named_mutex(TRAY_MUTEX_NAME)
     _tray_mutex_handle = handle
     return ok
+
+
+def _mutex_already_open(name: str) -> bool:
+    """True if another process already holds this named mutex."""
+    if sys.platform != "win32" or wintypes is None:
+        return False
+    kernel32.OpenMutexW.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR]
+    kernel32.OpenMutexW.restype = wintypes.HANDLE
+    handle = kernel32.OpenMutexW(_SYNCHRONIZE, False, name)
+    if handle:
+        kernel32.CloseHandle(handle)
+        return True
+    return False
+
+
+def is_host_running() -> bool:
+    return _mutex_already_open(MUTEX_NAME)
+
+
+def is_tray_running() -> bool:
+    return _mutex_already_open(TRAY_MUTEX_NAME)
+
+
+def acquire_settings_singleton() -> bool:
+    """Return False if the cheeT1 settings window is already open."""
+    global _settings_mutex_handle
+    ok, handle = _acquire_named_mutex(SETTINGS_MUTEX_NAME)
+    _settings_mutex_handle = handle
+    return ok
+
+
+def focus_window_by_title(title: str) -> bool:
+    """Restore and focus an existing top-level window. Windows only."""
+    if sys.platform != "win32":
+        return False
+    hwnd = user32.FindWindowW(None, title)
+    if not hwnd:
+        return False
+    user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+    user32.SetForegroundWindow(hwnd)
+    return True
 
 
 def pid_path() -> Path:

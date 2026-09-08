@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: cheet1-site
+    runtime: python
+    plan: free
+    rootDir: site
+    buildCommand: pip install -r requirements.txt
+    startCommand: python serve.py
+    envVars:
+      - key: HOST
+        value: 0.0.0.0

@@ -102,13 +102,53 @@ def _run_vbs(name: str) -> None:
 def start_host(_icon=None, _item=None) -> None:
     """Really start the host (same path as the tray Start item)."""
     _log.info("Start requested")
+    try:
+        import runtime
+
+        runtime.start_host()
+        return
+    except Exception:
+        _log.debug("runtime.start_host failed, falling back to VBS", exc_info=True)
     _run_vbs("run_hidden.vbs")
 
 
 def restart_host(_icon=None, _item=None) -> None:
     """Really stop then start the host (same path as the tray Restart item)."""
     _log.info("Restart requested")
+    try:
+        import runtime
+
+        runtime.restart_host()
+        return
+    except Exception:
+        _log.debug("runtime.restart_host failed, falling back to VBS", exc_info=True)
     _run_vbs("restart_host.vbs")
+
+
+def stop_host(_icon=None, _item=None) -> None:
+    """Stop the hidden host. The overflow tray stays running."""
+    _log.info("Stop requested")
+    try:
+        import runtime
+
+        runtime.stop_host()
+        return
+    except Exception:
+        _log.debug("runtime.stop_host failed, falling back to VBS", exc_info=True)
+    _run_vbs("stop_host.vbs")
+
+
+def start_tray() -> None:
+    """Bring the overflow Sync Host icon up if it is not already there."""
+    _log.info("Tray start requested")
+    try:
+        import runtime
+
+        runtime.start_tray()
+        return
+    except Exception:
+        _log.debug("runtime.start_tray failed, falling back to VBS", exc_info=True)
+    _run_vbs("run_tray.vbs")
 
 
 def _start_host(_icon=None, _item=None) -> None:

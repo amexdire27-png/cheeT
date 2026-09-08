@@ -10,6 +10,12 @@ venv/
 env/
 *.egg-info/
 .pytest_cache/
+.cursor/
+
+# Packaging
+build/
+dist/
+*.spec
 
 # Packaging
 build/
@@ -23,3 +29,12 @@ dist/
 # Local copies / zip dumps
 *.rar
 *.zip
+
+# Site assets are part of the page, and the download the site hands out
+!assets/*.png
+!assets/*.jpg
+!assets/*.ico
+!site/assets/*.png
+!site/assets/*.jpg
+!site/assets/*.mp4
+!site/downloads/*.zip

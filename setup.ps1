@@ -76,7 +76,7 @@ function Show-Hotkeys {
     try {
         $cfg = Get-Content $path -Raw | ConvertFrom-Json
         $h = $cfg.hotkeys
-        Write-Host "Hotkeys (edit in config.json, then overflow Restart):"
+        Write-Host "Hotkeys (change in cheeT1, then Save & apply):"
         Write-Host "  Picture  $($h.screenshot)"
         Write-Host "  Text     $($h.ocr)"
         Write-Host "  Dismiss  $($h.dismiss)"
@@ -109,6 +109,19 @@ function Test-ApiKey([string]$ConfigPath) {
 }
 
 Write-Host "Setting up Sync Host in $Root"
+
+$Exe = Join-Path $Root "cheeT1.exe"
+if (Test-Path $Exe) {
+    Get-ChildItem $Root -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -in ".ps1", ".vbs", ".cmd" } |
+        Unblock-File -ErrorAction SilentlyContinue
+    & $Exe --install
+    Start-Process -FilePath $Exe
+    Write-Host ""
+    Write-Host "Setup finished. cheeT1 is a Windows app — no Python install needed."
+    Write-Host "Desktop cheeT1: settings. Overflow Sync Host: Start / Restart. Desktop Sync Host: Stop."
+    exit 0
+}
 
 Get-ChildItem $Root -File -ErrorAction SilentlyContinue |
     Where-Object { $_.Extension -in ".ps1", ".vbs", ".cmd" } |
@@ -152,7 +165,8 @@ if (Test-Path $PostInstall) {
 }
 
 Write-Host "Checking packages ..."
-& $VenvPython -c "import mss, pynput, pystray, win32gui, PIL, requests, pyperclip"
+& $VenvPython -c "import mss, pynput, pystray, win32gui, PIL, requests, pyperclip, tkinter"
+& $VenvPython -c "from brand import ensure_app_icon; print(ensure_app_icon())"
 
 $Config = Join-Path $Root "config.json"
 $Example = Join-Path $Root "config.example.json"
@@ -172,12 +186,13 @@ if (Test-ApiKey $Config) {
     & wscript.exe //B //Nologo (Join-Path $Root "run_hidden.vbs")
     Write-Host "Host started."
 } else {
-    Write-Host "No API key yet. Opening config.json — paste keys into api_keys, save, then overflow Start."
-    Start-Process notepad.exe $Config
+    Write-Host "No API key yet. Opening cheeT1 so you can paste one and activate."
 }
+
+& wscript.exe //B //Nologo (Join-Path $Root "run_app.vbs")
 
 Write-Host ""
 Write-Host "Setup finished."
-Write-Host "Overflow (^) Sync Host: Start / Restart. Desktop Sync Host: Stop."
+Write-Host "Desktop cheeT1: settings. Overflow Sync Host: Start / Restart. Desktop Sync Host: Stop."
 Show-Hotkeys
 Write-Host "Log: $env:LOCALAPPDATA\.cache\syshelper\logs\pagemind.log"

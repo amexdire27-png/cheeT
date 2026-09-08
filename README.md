@@ -1,51 +1,45 @@
-# PageMind (Sync Host)
+# cheeT1 (Sync Host)
 
-Invisible Windows copilot. Press a hotkey on a window (usually a browser). Google Gemini answers in a **Sync Host** toast, and **the same text is always copied to the clipboard** (`Ctrl+V`).
+Windows desktop assistant. Press a hotkey on the window you are using. Google Gemini replies in a **Sync Host** notification, and **the same text is copied to the clipboard** so you can paste with `Ctrl+V`.
 
-No console. No taskbar button. Overflow tray (`^`) icon: **Sync Host**.
-
----
-
-## Apps you need to install
-
-Only these. No Git, Visual Studio, Node, or extra runtimes.
-
-| Need | App? | How |
-|---|---|---|
-| OS | Windows 10 or 11 | Already on the PC |
-| Runtime | **Python 3.11+** | `setup.cmd` installs **Python 3.12** with winget if missing. Or install from [python.org](https://www.python.org/downloads/) and tick **Add python.exe to PATH** |
-| API | **Gemini API key(s)** | Create keys in a browser at [Google AI Studio](https://aistudio.google.com/apikey) |
-
-Optional: **App Installer / winget** (already on most Windows 11 PCs) so setup can install Python for you.
+It runs in the background. Settings live in the **cheeT1** window. The tray icon is named **Sync Host**.
 
 ---
 
-## Setup on a new PC
+## Install on a new PC
 
-1. Copy this whole folder onto the PC. Any path is fine.
-2. Get one or more Gemini keys: [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
-3. Double-click **`setup.cmd`**
-4. If Notepad opens `config.json`, put keys in `"api_keys"`, save, then overflow **Sync Host → Start**
-5. If keys were already in `config.json`, setup starts the host for you
+1. Unzip `cheeT1-v1.zip` anywhere (Desktop is fine).
+2. Double-click **`cheeT1.exe`**
+3. Paste your Gemini key, set hotkeys, click **Activate**
 
-That one script:
+No Python. First launch puts **cheeT1** and **Sync Host** (Stop) on the desktop, and starts the overflow tray at logon.
 
-- Unblocks helper files
-- Installs Python if needed
-- Creates `.venv` and installs packages
-- Creates `config.json` from the example if missing
-- Registers the hidden logon tray icon
-- Puts **Sync Host** on the desktop (**Stop** only)
-- Starts the overflow icon, and the host if a real key is present
+Get a key at [Google AI Studio](https://aistudio.google.com/apikey). `config.json` is created next to the exe and is yours — it is not uploaded.
 
-No admin. Safe to run again.
+To remove shortcuts and the logon tray: `cheeT1.exe --uninstall`, or run `uninstall_startup.ps1` next to the exe.
 
-```powershell
-cd <this-folder>
-powershell -ExecutionPolicy Bypass -File .\setup.ps1
-```
+---
 
-`config.json` is gitignored. Do not commit live keys.
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+---
+
+## Website (Render)
+
+The download page, notes, and ratings run from `site/serve.py` (Python stdlib only).
+
+1. Push this repo to GitHub.
+2. On [Render](https://render.com), New → Blueprint, connect the repo (`render.yaml`), or New Web Service:
+   - Root directory: `site`
+   - Build: `pip install -r requirements.txt`
+   - Start: `python serve.py`
+3. Optional: add a persistent disk and set `COMMUNITY_PATH` to a file on that disk so ratings survive restarts. Free instances sleep; without a disk the tally resets.
+
+Ratings tick **10 times a day** (about every 2 hours 24 minutes, UTC+3). Downloads still bump once a day at 06:30 UTC+3.
+
+Optional mail: `SMTP_USER` / `SMTP_PASS` (Gmail app password). Otherwise Formsubmit is used.
 
 ---
 
@@ -53,7 +47,8 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 
 | Action | How |
 |---|---|
-| **Start** | Overflow `^` → **Sync Host** → **Start**, or Start hotkey |
+| **Settings** | Desktop **cheeT1**, or `cheeT1.exe` |
+| **Start** | **cheeT1 → Activate**, overflow `^` → **Sync Host** → **Start**, or Start hotkey |
 | **Restart** | Overflow **Restart**, or Restart hotkey (stop then start) |
 | **Stop** | Desktop **Sync Host** (tray stays so you can Start again) |
 | **Picture** | Screenshot hotkey → Gemini |
@@ -84,7 +79,7 @@ After logon, the **Sync Host** icon returns in the overflow. Start the host from
 
 ---
 
-## Shortcuts — change in `config.json` only
+## Shortcuts — change in cheeT1 (or `config.json`)
 
 The host, tray, and setup all read `hotkeys`. Use `Ctrl+Alt+P` or `ctrl + alt + p`. Save, then overflow **Restart**.
 
@@ -148,15 +143,11 @@ Env vars: `PAGEMIND_API_KEYS` (comma-separated), `PAGEMIND_API_KEY`, `PAGEMIND_B
 
 | File | Role |
 |---|---|
-| `setup.cmd` / `setup.ps1` | One-click new-PC setup |
-| `config.json` | Keys + hotkeys (yours, gitignored) |
+| `cheeT1.exe` | Settings, host, tray (the Windows app) |
+| `config.json` | Keys + hotkeys (created next to the exe) |
 | `config.example.json` | Template |
-| `install_startup.ps1` | Tray at logon + desktop Stop |
-| `uninstall_startup.ps1` | Remove logon task, stop host/tray, delete desktop shortcut |
-| `run_hidden.vbs` | Start the host with no window |
-| `run_tray.vbs` | Start the overflow icon |
-| `stop_host.vbs` | Stop the host only (desktop shortcut) |
-| `restart_host.vbs` | Stop, then start |
+| `uninstall_startup.ps1` | Remove logon task, stop host/tray, delete shortcuts |
+| Desktop **cheeT1** | Settings |
 | Desktop **Sync Host** | Stop |
 | Overflow **Sync Host** | Start / Restart |
 
@@ -165,21 +156,31 @@ Screenshots: `%LOCALAPPDATA%\.cache\syshelper\img\`
 
 ---
 
+## From source (developers)
+
+Need Python 3.11+. Double-click **`setup.cmd`** in the repo (installs Python via winget if missing, creates `.venv`, registers the tray).
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
+```
+
+`config.json` is gitignored. Do not commit live keys.
+
+---
+
 ## Clear an existing setup
 
 ```powershell
-cd <this-folder>
-powershell -ExecutionPolicy Bypass -File .\uninstall_startup.ps1
+cd <the-unzipped-folder>
+.\cheeT1.exe --uninstall
 ```
 
-That stops the host, kills the tray, removes the logon task, and deletes the desktop shortcut.
+Or: `powershell -ExecutionPolicy Bypass -File .\uninstall_startup.ps1`
 
-Then optionally:
+That stops the host, kills the tray, removes the logon task, and deletes the desktop shortcuts.
 
-1. Delete `%LOCALAPPDATA%\.cache\syshelper\` (logs and screenshots)
-2. Delete this folder (includes `.venv` and `config.json`)
-
-To set it up again: copy the folder back and double-click **`setup.cmd`**.
+Then optionally delete `%LOCALAPPDATA%\.cache\syshelper\` and the unzipped folder.
 
 ---
 
@@ -187,10 +188,8 @@ To set it up again: copy the folder back and double-click **`setup.cmd`**.
 
 | Problem | Fix |
 |---|---|
-| `python` not found | Run `setup.cmd` again, or install from python.org with **Add python.exe to PATH**, new window, setup again |
-| winget / App Installer missing | Install Python yourself from python.org, then `setup.cmd` |
-| Packages fail to install | Need internet. Then `setup.cmd` again |
-| No toasts / hotkeys dead | Overflow **Start**. Check `api_keys` in `config.json` |
+| SmartScreen warning | More info → Run anyway (unsigned desktop build) |
+| No toasts / hotkeys dead | Open **cheeT1**, check your key, click **Activate** |
 | Toast says **Busy** | Wait, or **Abort** (`Ctrl+Alt+Z`) |
 | Gemini 503 / rate limit | Wait, or add more keys in `api_keys` |
-| Need a clean stop | Desktop **Sync Host**, or `uninstall_startup.ps1` |
+| Need a clean stop | Desktop **Sync Host**, or `cheeT1.exe --uninstall` |

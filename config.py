@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from utils import app_dir, expand_path
+from utils import app_dir, expand_path, resource_dir
 
 _log = logging.getLogger("pagemind.config")
 
@@ -154,6 +154,9 @@ def config_path() -> Path:
 
 
 def example_path() -> Path:
+    bundled = resource_dir() / "config.example.json"
+    if bundled.exists():
+        return bundled
     return app_dir() / "config.example.json"
 
 
@@ -289,3 +292,49 @@ def load_config() -> Config:
         source_path=path,
     )
     return cfg
+
+
+def save_user_settings(
+    *,
+    api_keys: list[str],
+    hotkeys: dict[str, str],
+    model: str | None = None,
+    notification_duration_seconds: int | None = None,
+) -> Path:
+    """Write keys, hotkeys, and optional extras into config.json. Keeps other fields."""
+    path = ensure_config_file()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+
+    cleaned: list[str] = []
+    for raw in api_keys:
+        key = _clean_key(raw)
+        if key and key not in cleaned:
+            cleaned.append(key)
+    data["api_keys"] = cleaned
+    data.pop("api_key", None)
+    data.pop("backup_api_key", None)
+
+    existing_hot = data.get("hotkeys") if isinstance(data.get("hotkeys"), dict) else {}
+    merged_hot = dict(existing_hot)
+    for name in HOTKEY_DEFAULTS:
+        raw = str(hotkeys.get(name) or existing_hot.get(name) or HOTKEY_DEFAULTS[name])
+        merged_hot[name] = format_hotkey(_normalize_hotkey(raw, HOTKEY_DEFAULTS[name]))
+    data["hotkeys"] = merged_hot
+
+    if model:
+        data["model"] = str(model).strip()
+    if notification_duration_seconds is not None:
+        data["notification_duration_seconds"] = _as_int(
+            notification_duration_seconds, 5, minimum=2, maximum=30
+        )
+
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.replace(path)
+    _log.info("Saved settings to %s", path)
+    return path

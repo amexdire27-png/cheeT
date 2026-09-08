@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cheeT1 — quick answers from whatever is on your screen</title>
+<meta name="description" content="cheeT1 is a Windows desktop assistant. Press a hotkey on the window you are using and get a short answer as a notification, already copied to your clipboard.">
+<meta name="theme-color" content="#F2F2F2">
+<meta property="og:title" content="cheeT1 — Windows on-screen assistant">
+<meta property="og:description" content="Press a hotkey. Get a short answer as a notification, already on your clipboard. Windows 10/11, bring your own Gemini key.">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/favicon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="shell top__inner">
+    <a class="brand" href="#hero">
+      <img src="assets/logo.png?v=crop" alt="cheeT1" height="40" width="110">
+    </a>
+    <nav class="top__nav" aria-label="Page">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#notes">Notes</a>
+      <a class="top__download js-download" href="downloads/cheeT1-v1.zip" download data-label="Download">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero" id="hero">
+    <div class="shell hero__inner">
+      <div class="hero__copy">
+        <h1>Quick answers from whatever is on your screen.</h1>
+        <p class="byline">By DevaBDM and Gray</p>
+        <p class="lede">
+          Stay in the window you are using. Press a shortcut. A short answer
+          arrives as a notification — already copied, ready to paste.
+        </p>
+        <div class="hero__actions">
+          <a class="btn js-download" href="downloads/cheeT1-v1.zip" download data-label="Download for Windows">Download for Windows</a>
+        </div>
+        <p class="hero__meta" id="tally" aria-label="Downloads and rating">
+          <span class="stars-read" id="tallyStars" aria-hidden="true"></span>
+          <span id="tallyRating">—</span>
+          <span class="hero__sep" aria-hidden="true">·</span>
+          <span><span id="tallyDownloads">0</span>&nbsp;downloads</span>
+          <small id="tallyCount"></small>
+        </p>
+        <p class="fineprint">Windows 10/11 · Unzip and run · Your own Gemini key</p>
+      </div>
+
+      <div class="hero__stage" aria-hidden="true">
+        <div class="mock">
+          <div class="mock__bar">
+            <span class="mock__brand"><i></i>cheeT1 <b>v1</b></span>
+            <span class="mock__win">—&nbsp;&nbsp;✕</span>
+          </div>
+          <div class="mock__body">
+            <div class="mock__rail">
+              <nav>
+                <span class="on">Shortcuts</span>
+                <span>API keys</span>
+                <span>Answers</span>
+              </nav>
+              <span class="mock__go">Turn on</span>
+              <span class="mock__pair"><b>Stop</b><b>Restart</b></span>
+            </div>
+            <div class="mock__pane">
+              <h2>Shortcuts</h2>
+              <p>Click a shortcut, then press the keys you want.</p>
+              <div class="mock__row"><span>Picture<small>Capture the active window and ask</small></span><code>Ctrl + Alt + P</code></div>
+              <div class="mock__row"><span>Text<small>Read the window text, or capture it</small></span><code>Ctrl + Alt + T</code></div>
+              <div class="mock__row"><span>Dismiss<small>Close the current notification</small></span><code>Ctrl + Alt + D</code></div>
+              <div class="mock__row"><span>Abort<small>Cancel a request that is still running</small></span><code>Ctrl + Alt + Z</code></div>
+              <div class="mock__foot"><b>Save changes</b><i>Keys and shortcuts stay on this PC.</i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="shell">
+      <header class="section__head">
+        <h2>Three steps. No second window.</h2>
+      </header>
+      <div class="steps">
+        <article>
+          <h3>Press your hotkey</h3>
+          <p>Stay in the app you are already using. One shortcut, chosen by you.</p>
+        </article>
+        <article>
+          <h3>cheeT1 reads the active window</h3>
+          <p>Window text when Windows exposes it, otherwise a capture of that window only.</p>
+        </article>
+        <article>
+          <h3>The answer arrives as a notification</h3>
+          <p>Short and readable — and the same text is on your clipboard, ready to paste.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="demo">
+    <div class="shell">
+      <header class="section__head">
+        <h2>What it looks like in use.</h2>
+      </header>
+
+      <div class="player" id="player">
+        <ol class="player__chapters" id="playerChapters" aria-label="Steps in the recording">
+          <li><button type="button" data-step="1" class="is-on">1 · Use your hotkey</button></li>
+          <li><button type="button" data-step="2">2 · cheeT1 reads the active window</button></li>
+          <li><button type="button" data-step="3">3 · The answer arrives as a notification</button></li>
+        </ol>
+        <div class="player__screen" id="playerScreen">
+          <video
+            id="howVideo"
+            playsinline
+            muted
+            preload="metadata"
+            poster="assets/how-it-works.jpg"
+            src="assets/how-it-works.mp4"
+            aria-label="Screen recording: press your hotkey, cheeT1 reads the active window, then the answer arrives as a notification."
+          >
+            Your browser cannot play this recording.
+          </video>
+          <button class="player__play" id="playerPlayBig" type="button" aria-label="Play">Play</button>
+        </div>
+        <div class="player__bar">
+          <button class="player__toggle" id="playerToggle" type="button" aria-label="Play">Play</button>
+          <input class="player__scrub" id="playerScrub" type="range" min="0" max="25" step="0.05" value="0" aria-label="Video position">
+          <span class="player__time" id="playerTime">0:00 / 0:25</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="features">
+    <div class="shell">
+      <header class="section__head">
+        <h2>A utility, not a chat tab.</h2>
+      </header>
+      <div class="grid2">
+        <article>
+          <h3>Hotkey capture</h3>
+          <p>Picture or text mode on the active window. Every shortcut is remappable — click the field and press the keys.</p>
+        </article>
+        <article>
+          <h3>Your own Gemini key</h3>
+          <p>Bring a key from Google AI Studio. Add several — the next one is used if a key is rate-limited or out of quota.</p>
+        </article>
+        <article>
+          <h3>Runs in the tray</h3>
+          <p>The background service shows up as <b>Sync Host</b>. Start, restart, or stop it from the tray or the app.</p>
+        </article>
+        <article>
+          <h3>Settings stay local</h3>
+          <p>Keys and shortcuts live in <code>config.json</code> on your PC. No account, no sync, no dashboard.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="notes">
+    <div class="shell shell--narrow">
+      <header class="section__head section__head--center">
+        <h2>Notes from people using it.</h2>
+        <p class="section__lede">Tap a star score — a note is optional. Scores update the tally. A written note is emailed to us.</p>
+      </header>
+
+      <form class="noteform" id="noteForm" novalidate>
+        <fieldset class="field">
+          <legend>Score</legend>
+            <div class="score" role="radiogroup" aria-label="Score from 1 to 5 stars" id="noteScore">
+              <label><input type="radio" name="rating" value="1"><svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 14.8 8.4 21.6 9.1 16.5 13.6 18 20.5 12 17.1 6 20.5 7.5 13.6 2.4 9.1 9.2 8.4Z"/></svg><span class="vh">1 star</span></label>
+              <label><input type="radio" name="rating" value="2"><svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 14.8 8.4 21.6 9.1 16.5 13.6 18 20.5 12 17.1 6 20.5 7.5 13.6 2.4 9.1 9.2 8.4Z"/></svg><span class="vh">2 stars</span></label>
+              <label><input type="radio" name="rating" value="3"><svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 14.8 8.4 21.6 9.1 16.5 13.6 18 20.5 12 17.1 6 20.5 7.5 13.6 2.4 9.1 9.2 8.4Z"/></svg><span class="vh">3 stars</span></label>
+              <label><input type="radio" name="rating" value="4"><svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 14.8 8.4 21.6 9.1 16.5 13.6 18 20.5 12 17.1 6 20.5 7.5 13.6 2.4 9.1 9.2 8.4Z"/></svg><span class="vh">4 stars</span></label>
+              <label><input type="radio" name="rating" value="5"><svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 14.8 8.4 21.6 9.1 16.5 13.6 18 20.5 12 17.1 6 20.5 7.5 13.6 2.4 9.1 9.2 8.4Z"/></svg><span class="vh">5 stars</span></label>
+            </div>
+          <span class="field__err" id="errRating" hidden></span>
+        </fieldset>
+        <label class="field">
+          <span>Name <i>(optional)</i></span>
+          <input id="noteName" name="name" type="text" autocomplete="nickname" spellcheck="false" maxlength="40" placeholder="Alex…">
+          <span class="field__err" id="errName" hidden></span>
+        </label>
+        <label class="field">
+          <span>Note <i>(optional)</i></span>
+          <textarea id="noteBody" name="note" rows="5" maxlength="400" placeholder="What happened when you used the hotkey…"></textarea>
+          <span class="field__err" id="errNote" hidden></span>
+        </label>
+        <input class="hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <button class="btn" id="noteSubmit" type="submit" data-label="Send">Send</button>
+        <p class="noteform__live" id="noteLive" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <section class="section section--download" id="download">
+    <div class="shell shell--narrow">
+      <header class="section__head section__head--center">
+        <h2>Install it, add your key, turn it on.</h2>
+      </header>
+      <a class="btn js-download" href="downloads/cheeT1-v1.zip" download data-label="Download for Windows">Download for Windows</a>
+      <p class="fineprint">Windows 10/11 · Unzip and run · Your own Gemini key</p>
+      <ul class="trust">
+        <li>Open source core</li>
+        <li>No telemetry</li>
+        <li>Stop anytime from the tray or a desktop shortcut</li>
+      </ul>
+      <div class="acc" id="acc">
+        <button class="acc__head" type="button" aria-expanded="false" aria-controls="accPanel" id="accBtn">
+          Technical details
+        </button>
+        <div class="acc__panel" id="accPanel" role="region" aria-labelledby="accBtn" hidden>
+          <dl class="spec">
+            <div><dt>Platform</dt><dd>Windows 10 / 11 only</dd></div>
+            <div><dt>Built with</dt><dd>Windows app — unzip and run <code>cheeT1.exe</code></dd></div>
+            <div><dt>Capture</dt><dd>mss + Pillow + pywin32, active window only, on hotkey</dd></div>
+            <div><dt>Model</dt><dd>Google Gemini over HTTPS with your key</dd></div>
+            <div><dt>Settings</dt><dd><code>config.json</code> next to the app, on your machine</dd></div>
+            <div><dt>Background</dt><dd>Tray service <b>Sync Host</b>, optional start at logon</dd></div>
+            <div><dt>Uninstall</dt><dd><code>cheeT1.exe --uninstall</code>, or <code>uninstall_startup.ps1</code> next to the exe</dd></div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="shell foot__inner">
+    <span>cheeT1 · By DevaBDM and Gray</span>
+    <button
+      class="foot__contact"
+      id="contactBtn"
+      type="button"
+      aria-expanded="false"
+      aria-haspopup="dialog"
+      aria-controls="contactSheet"
+    >Contact</button>
+  </div>
+</footer>
+
+<div class="sheet" id="contactSheet" hidden>
+  <div
+    class="sheet__panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="contactTitle"
+    tabindex="-1"
+  >
+    <div class="sheet__top">
+      <h2 id="contactTitle">Contact</h2>
+      <button class="sheet__close" id="contactClose" type="button">Close</button>
+    </div>
+    <ul class="sheet__people">
+      <li>
+        <span translate="no">Gray</span>
+        <a href="https://t.me/amsilicon" target="_blank" rel="noopener noreferrer" translate="no">@amsilicon</a>
+      </li>
+      <li>
+        <span translate="no">DevaBDM</span>
+        <a href="https://t.me/DevaBDM" target="_blank" rel="noopener noreferrer" translate="no">@DevaBDM</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>
