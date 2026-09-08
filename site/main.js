@@ -56,11 +56,17 @@
     }
   };
 
+  const ensureVideoSrc = () => {
+    if (!howVideo || howVideo.getAttribute("src") || !howVideo.dataset.src) return;
+    howVideo.src = howVideo.dataset.src;
+  };
+
   const startVideo = () => {
     if (!player || !howVideo) return;
+    if (reduced) return;
+    ensureVideoSrc();
     howVideo.currentTime = 0;
     syncPlayer();
-    if (reduced) return;
     howVideo.play().catch(() => {});
   };
 
@@ -77,6 +83,7 @@
       syncPlayer();
       return;
     }
+    ensureVideoSrc();
     if (howVideo.ended) howVideo.currentTime = 0;
     howVideo.play().catch(() => {});
   };
@@ -96,6 +103,7 @@
     playerScrub.addEventListener("pointerdown", () => { scrubbing = true; });
     playerScrub.addEventListener("pointerup", () => { scrubbing = false; });
     playerScrub.addEventListener("input", () => {
+      ensureVideoSrc();
       howVideo.currentTime = Number(playerScrub.value);
       syncPlayer();
     });
@@ -103,6 +111,7 @@
   playerChapters.forEach((el) => {
     el.addEventListener("click", () => {
       if (!howVideo) return;
+      ensureVideoSrc();
       howVideo.currentTime = STEP_SEEK[Number(el.dataset.step)] ?? 0;
       syncPlayer();
     });

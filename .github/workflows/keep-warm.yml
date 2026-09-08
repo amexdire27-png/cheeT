@@ -1,0 +1,15 @@
+name: Keep Render warm
+
+on:
+  schedule:
+    - cron: "*/12 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake the site
+        run: |
+          curl -fsS -o /dev/null -w "%{http_code}\n" --max-time 90 https://cheet1-site.onrender.com/
+          curl -fsS -o /dev/null --max-time 90 https://cheet1-site.onrender.com/api/community

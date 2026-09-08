@@ -5,13 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>cheeT1 — quick answers from whatever is on your screen</title>
 <meta name="description" content="cheeT1 is a Windows desktop assistant. Press a hotkey on the window you are using and get a short answer as a notification, already copied to your clipboard.">
+<meta name="robots" content="index, follow">
 <meta name="theme-color" content="#F2F2F2">
+<meta name="color-scheme" content="light">
+<link rel="canonical" href="https://cheet1-site.onrender.com/">
+<meta property="og:site_name" content="cheeT1">
 <meta property="og:title" content="cheeT1 — Windows on-screen assistant">
 <meta property="og:description" content="Press a hotkey. Get a short answer as a notification, already on your clipboard. Windows 10/11, bring your own Gemini key.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://cheet1-site.onrender.com/">
+<meta property="og:image" content="https://cheet1-site.onrender.com/assets/how-it-works.jpg">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="cheeT1 — Windows on-screen assistant">
+<meta name="twitter:description" content="Press a hotkey. Get a short answer as a notification, already on your clipboard. Windows 10/11, bring your own Gemini key.">
+<meta name="twitter:image" content="https://cheet1-site.onrender.com/assets/how-it-works.jpg">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
 <link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "cheeT1",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Windows 10, Windows 11",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Windows on-screen assistant. Press a hotkey on the window you are using and get a short answer as a notification, already copied to your clipboard.",
+  "url": "https://cheet1-site.onrender.com/",
+  "image": "https://cheet1-site.onrender.com/assets/how-it-works.jpg",
+  "author": [
+    { "@type": "Person", "name": "DevaBDM" },
+    { "@type": "Person", "name": "Gray" }
+  ]
+}
+</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -19,7 +47,7 @@
 <header class="top">
   <div class="shell top__inner">
     <a class="brand" href="#hero">
-      <img src="assets/logo.png?v=crop" alt="cheeT1" height="40" width="110">
+      <img src="assets/logo.png?v=crop" alt="cheeT1" height="40" width="110" fetchpriority="high" decoding="async" translate="no">
     </a>
     <nav class="top__nav" aria-label="Page">
       <a href="#how">How it works</a>
@@ -57,7 +85,7 @@
       <div class="hero__stage" aria-hidden="true">
         <div class="mock">
           <div class="mock__bar">
-            <span class="mock__brand"><i></i>cheeT1 <b>v1</b></span>
+            <span class="mock__brand" translate="no"><i></i>cheeT1 <b>v1</b></span>
             <span class="mock__win">—&nbsp;&nbsp;✕</span>
           </div>
           <div class="mock__body">
@@ -124,9 +152,9 @@
             id="howVideo"
             playsinline
             muted
-            preload="metadata"
+            preload="none"
             poster="assets/how-it-works.jpg"
-            src="assets/how-it-works.mp4"
+            data-src="assets/how-it-works.mp4"
             aria-label="Screen recording: press your hotkey, cheeT1 reads the active window, then the answer arrives as a notification."
           >
             Your browser cannot play this recording.
@@ -238,7 +266,7 @@
 
 <footer class="foot">
   <div class="shell foot__inner">
-    <span>cheeT1 · By DevaBDM and Gray</span>
+    <span><span translate="no">cheeT1</span> · By <span translate="no">DevaBDM</span> and <span translate="no">Gray</span></span>
     <button
       class="foot__contact"
       id="contactBtn"
@@ -275,6 +303,6 @@
   </div>
 </div>
 
-<script src="main.js"></script>
+<script src="main.js" defer></script>
 </body>
 </html>

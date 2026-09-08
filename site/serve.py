@@ -10,6 +10,7 @@ On Render, bind 0.0.0.0 and $PORT. Notes go to MAIL_TO via Resend
 
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import re
@@ -54,6 +55,9 @@ def public_state(data: dict, mail_ok: bool | None = None) -> dict:
     if mail_ok is not None:
         out["mail_ok"] = mail_ok
     return out
+
+
+def _empty() -> dict:
     return {"downloads": 0, "rating_sum": 0, "rating_count": 0}
 
 
@@ -154,6 +158,13 @@ def send_note_email(name: str, rating: int, note: str) -> None:
     print(f"Resend sent {email_id}", flush=True)
 
 
+def _send_mail_bg(name: str, rating: int, note: str) -> None:
+    try:
+        send_note_email(name, rating, note)
+    except Exception as exc:
+        print(f"Mail failed: {exc}", flush=True)
+
+
 def apply(msg: dict) -> dict:
     data = load()
     op = str(msg.get("op") or "")
@@ -172,12 +183,13 @@ def apply(msg: dict) -> dict:
         data["rating_sum"] = int(data.get("rating_sum") or 0) + rating
         data["rating_count"] = int(data.get("rating_count") or 0) + 1
         save(data)
-        try:
-            send_note_email(name, rating, note or "(no note)")
-            return public_state(data, True)
-        except Exception as exc:
-            print(f"Mail failed: {exc}", flush=True)
-            return public_state(data, False)
+        threading.Thread(
+            target=_send_mail_bg,
+            args=(name, rating, note or "(no note)"),
+            daemon=True,
+            name="cheet1-mail",
+        ).start()
+        return public_state(data, _mail_ready())
     raise ValueError("Unknown op")
 
 
@@ -195,17 +207,51 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.split("?", 1)[0] != "/api/community":
             self.send_error(404)
             return
+        self._api = True
         self.send_response(204)
         self._cors()
         self.end_headers()
 
+    _GZIP_EXT = {".html", ".css", ".js", ".json", ".txt", ".xml", ".svg"}
+    _LONG_CACHE = {".css", ".js", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".mp4", ".woff2"}
+
+    def end_headers(self) -> None:
+        if not getattr(self, "_api", False):
+            raw = self.path.split("?", 1)[0]
+            ext = Path(raw).suffix.lower()
+            if ext in self._LONG_CACHE:
+                self.send_header("Cache-Control", "public, max-age=86400")
+            elif raw in ("/", "/index.html") or ext == ".html":
+                self.send_header("Cache-Control", "public, max-age=120")
+            elif ext in {".xml", ".txt"}:
+                self.send_header("Cache-Control", "public, max-age=3600")
+        super().end_headers()
+
     def do_GET(self) -> None:
         if self.path.split("?", 1)[0] == "/api/community":
+            self._api = True
             with LOCK:
                 body = json.dumps(public_state(load())).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self._cors()
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        path = self.translate_path(self.path)
+        if os.path.isdir(path):
+            index = os.path.join(path, "index.html")
+            if os.path.isfile(index):
+                path = index
+        ext = Path(path).suffix.lower()
+        accept = self.headers.get("Accept-Encoding") or ""
+        if os.path.isfile(path) and ext in self._GZIP_EXT and "gzip" in accept:
+            body = gzip.compress(Path(path).read_bytes(), compresslevel=5)
+            self.send_response(200)
+            self.send_header("Content-Type", self.guess_type(path))
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -229,6 +275,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(400)
             return
         try:
+            self._api = True
             with LOCK:
                 data = apply(msg)
         except ValueError:
