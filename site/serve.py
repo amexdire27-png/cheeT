@@ -114,39 +114,31 @@ def _stars(rating: int) -> str:
 
 
 def send_note_email(name: str, rating: int, note: str) -> None:
+    import html as html_lib
+
+    import resend
+
     stars = _stars(rating)
     subject = f"cheeT1 note: {stars} from {name}"
     body = f"Name: {name}\nScore: {stars} ({rating} / 5)\n\n{note}\n"
+    safe_note = html_lib.escape(note).replace("\n", "<br>")
+    safe_name = html_lib.escape(name)
     resend_key = (os.environ.get("RESEND_API_KEY") or "").strip()
     if resend_key:
-        mail_from = (os.environ.get("RESEND_FROM") or "cheeT1 <beth.t@example.com>").strip()
-        payload = {
-            "from": mail_from,
-            "to": [MAIL_TO],
+        resend.api_key = resend_key
+        result = resend.Emails.send({
+            "from": (os.environ.get("RESEND_FROM") or "onboarding@resend.dev").strip(),
+            "to": MAIL_TO,
             "subject": subject,
-            "text": body,
-        }
-        req = urllib.request.Request(
-            "https://api.resend.com/emails",
-            data=json.dumps(payload).encode(),
-            headers={
-                "Authorization": f"Bearer {resend_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=15) as res:
-                raw = res.read().decode("utf-8", errors="replace")
-        except urllib.error.HTTPError as err:
-            raise OSError("Mail failed") from err
-        try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError:
-            return
-        if parsed.get("id"):
-            return
-        raise OSError("Mail failed")
+            "html": (
+                f"<p><strong>Name:</strong> {safe_name}</p>"
+                f"<p><strong>Score:</strong> {stars} ({rating} / 5)</p>"
+                f"<p>{safe_note}</p>"
+            ),
+        })
+        if not isinstance(result, dict) or not result.get("id"):
+            raise OSError(f"Mail failed: {result}")
+        return
 
     user = (os.environ.get("SMTP_USER") or "").strip()
     password = (os.environ.get("SMTP_PASS") or "").strip()
@@ -213,7 +205,7 @@ def apply(msg: dict) -> dict:
         save(data)
         try:
             send_note_email(name, rating, note or "(no note)")
-        except (OSError, smtplib.SMTPException, TimeoutError, ValueError) as exc:
+        except Exception as exc:
             print(f"Mail failed: {exc}", flush=True)
         return data
     raise ValueError("Unknown op")

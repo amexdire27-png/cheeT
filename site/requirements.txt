@@ -1,2 +1,1 @@
-# Landing site uses Python stdlib only.
-# Do not install the repo-root requirements.txt on Linux hosts (it needs pywin32).
+resend>=2.0.0
