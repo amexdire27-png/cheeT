@@ -13,11 +13,7 @@ from __future__ import annotations
 import json
 import os
 import re
-import smtplib
 import threading
-import urllib.error
-import urllib.request
-from email.message import EmailMessage
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -124,65 +120,25 @@ def send_note_email(name: str, rating: int, note: str) -> None:
     safe_note = html_lib.escape(note).replace("\n", "<br>")
     safe_name = html_lib.escape(name)
     resend_key = (os.environ.get("RESEND_API_KEY") or "").strip()
-    if resend_key:
-        resend.api_key = resend_key
-        result = resend.Emails.send({
-            "from": (os.environ.get("RESEND_FROM") or "onboarding@resend.dev").strip(),
-            "to": MAIL_TO,
-            "subject": subject,
-            "html": (
-                f"<p><strong>Name:</strong> {safe_name}</p>"
-                f"<p><strong>Score:</strong> {stars} ({rating} / 5)</p>"
-                f"<p>{safe_note}</p>"
-            ),
-        })
-        if not isinstance(result, dict) or not result.get("id"):
-            raise OSError(f"Mail failed: {result}")
-        return
+    if not resend_key:
+        raise OSError("RESEND_API_KEY is not set")
 
-    user = (os.environ.get("SMTP_USER") or "").strip()
-    password = (os.environ.get("SMTP_PASS") or "").strip()
-    if user and password:
-        host = (os.environ.get("SMTP_HOST") or "smtp.gmail.com").strip()
-        port = int(os.environ.get("SMTP_PORT") or "587")
-        mail_from = (os.environ.get("MAIL_FROM") or user).strip()
-        msg = EmailMessage()
-        msg["Subject"] = subject
-        msg["From"] = mail_from
-        msg["To"] = MAIL_TO
-        msg.set_content(body)
-        with smtplib.SMTP(host, port, timeout=12) as smtp:
-            smtp.starttls()
-            smtp.login(user, password)
-            smtp.send_message(msg)
-        return
-    payload = {
-        "name": name,
-        "rating": f"{stars} ({rating} / 5)",
-        "note": note,
-        "_subject": subject,
-        "_captcha": "false",
+    resend.api_key = resend_key
+    params = {
+        "from": (os.environ.get("RESEND_FROM") or "onboarding@resend.dev").strip(),
+        "to": [MAIL_TO],
+        "subject": subject,
+        "html": (
+            f"<p><strong>Name:</strong> {safe_name}</p>"
+            f"<p><strong>Score:</strong> {stars} ({rating} / 5)</p>"
+            f"<p>{safe_note}</p>"
+        ),
     }
-    req = urllib.request.Request(
-        f"https://formsubmit.co/ajax/{MAIL_TO}",
-        data=json.dumps(payload).encode(),
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=12) as res:
-            raw = res.read().decode("utf-8", errors="replace")
-    except urllib.error.HTTPError as err:
-        raise OSError("Mail failed") from err
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
-        return
-    if str(parsed.get("success")).lower() in {"false", "0"}:
-        raise OSError("Mail failed")
+    result = resend.Emails.send(params)
+    email_id = result.get("id") if isinstance(result, dict) else getattr(result, "id", None)
+    if not email_id:
+        raise OSError(f"Mail failed: {result}")
+    print(f"Resend sent {email_id}", flush=True)
 
 
 def apply(msg: dict) -> dict:
@@ -284,6 +240,10 @@ def main() -> None:
     port = int(os.environ.get("PORT", "8765"))
     httpd = ThreadingHTTPServer((host, port), Handler)
     print(f"cheeT1 site: http://{host}:{port}/", flush=True)
+    if (os.environ.get("RESEND_API_KEY") or "").strip():
+        print("Mail: Resend ready", flush=True)
+    else:
+        print("Mail: RESEND_API_KEY missing — notes will not appear in Resend", flush=True)
     httpd.serve_forever()
 
 
