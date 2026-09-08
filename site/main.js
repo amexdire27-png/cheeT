@@ -428,18 +428,27 @@
             company: ""
           });
           applyData(data, true);
+          form.reset();
+          paintStars(0);
+          dirty = false;
+          if (live) {
+            live.textContent = data.mail_ok === false
+              ? "Score saved. Email is not set on Render — add RESEND_API_KEY."
+              : (note ? "Note sent." : "Score sent.");
+          }
+          paint();
         } else {
           await postNoteMail({ name, note, rating });
           const local = readLocal();
           local.ratingSum = (Number(local.ratingSum) || 0) + rating;
           local.ratingCount = (Number(local.ratingCount) || 0) + 1;
           writeLocal(local);
+          form.reset();
+          paintStars(0);
+          dirty = false;
+          if (live) live.textContent = note ? "Note sent." : "Score sent.";
+          paint();
         }
-        form.reset();
-        paintStars(0);
-        dirty = false;
-        if (live) live.textContent = note ? "Note sent." : "Score sent.";
-        paint();
       } catch {
         if (live) live.textContent = "Could not send.";
       } finally {

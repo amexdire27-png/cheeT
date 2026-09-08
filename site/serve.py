@@ -40,7 +40,20 @@ def _load_dotenv() -> None:
 _load_dotenv()
 
 
-def _empty() -> dict:
+def _mail_ready() -> bool:
+    return bool((os.environ.get("RESEND_API_KEY") or "").strip())
+
+
+def public_state(data: dict, mail_ok: bool | None = None) -> dict:
+    out = {
+        "downloads": int(data.get("downloads") or 0),
+        "rating_sum": int(data.get("rating_sum") or 0),
+        "rating_count": int(data.get("rating_count") or 0),
+        "mail_ready": _mail_ready(),
+    }
+    if mail_ok is not None:
+        out["mail_ok"] = mail_ok
+    return out
     return {"downloads": 0, "rating_sum": 0, "rating_count": 0}
 
 
@@ -147,7 +160,7 @@ def apply(msg: dict) -> dict:
     if op == "download":
         data["downloads"] = int(data.get("downloads") or 0) + 1
         save(data)
-        return data
+        return public_state(data)
     if op == "review":
         name = _clean_name(msg.get("name")) or "Anonymous"
         note = _clean_note(msg.get("note"))
@@ -161,9 +174,10 @@ def apply(msg: dict) -> dict:
         save(data)
         try:
             send_note_email(name, rating, note or "(no note)")
+            return public_state(data, True)
         except Exception as exc:
             print(f"Mail failed: {exc}", flush=True)
-        return data
+            return public_state(data, False)
     raise ValueError("Unknown op")
 
 
@@ -188,7 +202,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path.split("?", 1)[0] == "/api/community":
             with LOCK:
-                body = json.dumps(load()).encode("utf-8")
+                body = json.dumps(public_state(load())).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self._cors()
