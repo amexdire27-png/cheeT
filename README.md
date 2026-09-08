@@ -26,20 +26,15 @@ MIT. See [LICENSE](LICENSE).
 
 ---
 
-## Website (Render)
+## Website (GitHub Pages)
 
-The download page, notes, and ratings run from `site/serve.py` (Python stdlib only).
+The live site is **[amexdire27-png.github.io/cheeT](https://amexdire27-png.github.io/cheeT/)**.
 
-1. Push this repo to GitHub.
-2. On [Render](https://render.com), New → Blueprint, connect the repo (`render.yaml`), or New Web Service:
-   - Root directory: `site`
-   - Build: `pip install -r requirements.txt`
-   - Start: `python serve.py`
-3. Optional: add a persistent disk and set `COMMUNITY_PATH` to a file on that disk so ratings survive restarts. Free instances sleep; without a disk the tally resets.
+GitHub Pages serves the `site/` folder (static files). Notes email **amexdire27@gmail.com** through Formsubmit; the first send asks you to confirm that inbox. Stars and download counts are a snapshot plus this browser’s own clicks — there is no always-on Python server.
 
-Ratings tick **10 times a day** (about every 2 hours 24 minutes, UTC+3). Downloads still bump once a day at 06:30 UTC+3.
+A GitHub Action deploys on every push to `master`. To publish: push, then wait for the **GitHub Pages** workflow on the repo **Actions** tab.
 
-Optional mail: `SMTP_USER` / `SMTP_PASS` (Gmail app password). Otherwise Formsubmit is used.
+Local preview: `python site/serve.py` → http://127.0.0.1:8765/
 
 ---
 

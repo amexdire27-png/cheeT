@@ -216,6 +216,8 @@
     )).join("");
   };
 
+  const MAIL_TO = "amexdire27@gmail.com";
+
   const postCommunity = async (payload) => {
     const res = await fetch("api/community", {
       method: "POST",
@@ -224,6 +226,23 @@
     });
     if (!res.ok) throw new Error("save failed");
     return res.json();
+  };
+
+  const postNoteMail = async ({ name, note, rating }) => {
+    const who = name || "Anonymous";
+    const stars = `${"★".repeat(rating)}${"☆".repeat(5 - rating)}`;
+    const res = await fetch(`https://formsubmit.co/ajax/${MAIL_TO}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        name: who,
+        rating: `${stars} (${rating} / 5)`,
+        note: note || "(no note)",
+        _subject: `cheeT1 note: ${stars} from ${who}`,
+        _captcha: "false",
+      }),
+    });
+    if (!res.ok) throw new Error("mail");
   };
 
   const applyData = (data, remote) => {
@@ -250,9 +269,13 @@
 
   const renderTally = () => {
     const local = readLocal();
-    const downloads = community.downloads + (community.remote ? 0 : Number(local.extraDownloads) || 0);
-    const n = community.ratingCount;
-    const avg = n ? community.ratingSum / n : 0;
+    const extraDown = Number(local.extraDownloads) || 0;
+    const extraSum = Number(local.ratingSum) || 0;
+    const extraCount = Number(local.ratingCount) || 0;
+    const downloads = community.downloads + (community.remote ? 0 : extraDown);
+    const sum = community.ratingSum + (community.remote ? 0 : extraSum);
+    const n = community.ratingCount + (community.remote ? 0 : extraCount);
+    const avg = n ? sum / n : 0;
     const downloadsEl = q("#tallyDownloads");
     const starsEl = q("#tallyStars");
     const ratingEl = q("#tallyRating");
@@ -395,16 +418,23 @@
       }
 
       try {
-        if (!community.remote) throw new Error("offline");
-        const data = await postCommunity({
-          op: "review",
-          name,
-          note,
-          rating,
-          at: new Date().toISOString(),
-          company: ""
-        });
-        applyData(data, true);
+        if (community.remote) {
+          const data = await postCommunity({
+            op: "review",
+            name,
+            note,
+            rating,
+            at: new Date().toISOString(),
+            company: ""
+          });
+          applyData(data, true);
+        } else {
+          await postNoteMail({ name, note, rating });
+          const local = readLocal();
+          local.ratingSum = (Number(local.ratingSum) || 0) + rating;
+          local.ratingCount = (Number(local.ratingCount) || 0) + 1;
+          writeLocal(local);
+        }
         form.reset();
         paintStars(0);
         dirty = false;
