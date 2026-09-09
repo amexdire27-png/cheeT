@@ -203,7 +203,7 @@
     } catch {
       /* ignore */
     }
-    return { extraDownloads: 0 };
+    return {};
   };
 
   const writeLocal = (data) => {
@@ -214,7 +214,37 @@
     downloads: 0,
     ratingSum: 0,
     ratingCount: 0,
-    remote: false
+    remote: false,
+    ready: false
+  };
+
+  const rememberRemote = () => {
+    const local = readLocal();
+    local.fromRemote = true;
+    local.downloads = community.downloads;
+    local.ratingSum = community.ratingSum;
+    local.ratingCount = community.ratingCount;
+    delete local.extraDownloads;
+    writeLocal(local);
+  };
+
+  const hydrateFromCache = () => {
+    const local = readLocal();
+    if (local.fromRemote) {
+      community.downloads = Math.max(0, Number(local.downloads) || 0);
+      community.ratingSum = Math.max(0, Number(local.ratingSum) || 0);
+      community.ratingCount = Math.max(0, Number(local.ratingCount) || 0);
+      community.remote = true;
+      community.ready = true;
+      return;
+    }
+    const extras = Number(local.extraDownloads) || 0;
+    if (extras > 0) {
+      community.downloads = extras;
+      community.ratingSum = Math.max(0, Number(local.ratingSum) || 0);
+      community.ratingCount = Math.max(0, Number(local.ratingCount) || 0);
+      community.ready = true;
+    }
   };
 
   const STAR_PATH = "M12 2.2 14.8 8.4 21.6 9.1 16.5 13.6 18 20.5 12 17.1 6 20.5 7.5 13.6 2.4 9.1 9.2 8.4Z";
@@ -256,7 +286,7 @@
 
   const applyData = (data, remote) => {
     if (!data || typeof data !== "object") return;
-    community.downloads = Math.max(0, Number(data.downloads) || 0);
+    const incomingDown = Math.max(0, Number(data.downloads) || 0);
     let sum = Number(data.rating_sum);
     let count = Number(data.rating_count);
     if (!Number.isFinite(sum) || !Number.isFinite(count) || count < 0) {
@@ -271,25 +301,32 @@
         }
       });
     }
-    community.ratingSum = Math.max(0, sum);
-    community.ratingCount = Math.max(0, count);
+    sum = Math.max(0, sum);
+    count = Math.max(0, count);
+    const keepDown = remote && community.ready && incomingDown < community.downloads;
+    const keepScores = remote && community.ready && count < community.ratingCount;
+    community.downloads = keepDown ? community.downloads : incomingDown;
+    if (!keepScores) {
+      community.ratingSum = sum;
+      community.ratingCount = count;
+    }
     community.remote = Boolean(remote);
+    community.ready = true;
+    if (remote) rememberRemote();
   };
 
   const renderTally = () => {
-    const local = readLocal();
-    const extraDown = Number(local.extraDownloads) || 0;
-    const extraSum = Number(local.ratingSum) || 0;
-    const extraCount = Number(local.ratingCount) || 0;
-    const downloads = community.downloads + (community.remote ? 0 : extraDown);
-    const sum = community.ratingSum + (community.remote ? 0 : extraSum);
-    const n = community.ratingCount + (community.remote ? 0 : extraCount);
+    const downloads = community.downloads;
+    const sum = community.ratingSum;
+    const n = community.ratingCount;
     const avg = n ? sum / n : 0;
     const downloadsEl = q("#tallyDownloads");
     const starsEl = q("#tallyStars");
     const ratingEl = q("#tallyRating");
     const countEl = q("#tallyCount");
-    if (downloadsEl) downloadsEl.textContent = fmtNum.format(downloads);
+    if (downloadsEl) {
+      downloadsEl.textContent = community.ready ? fmtNum.format(downloads) : "—";
+    }
     if (starsEl) starsEl.innerHTML = starGlyphs(n ? avg : 0);
     if (ratingEl) {
       ratingEl.textContent = n ? (avg).toFixed(1).replace(/\.0$/, "") : "—";
@@ -308,17 +345,21 @@
     const now = Date.now();
     if (now - (Number(local.lastDownloadAt) || 0) < 4000) return;
     local.lastDownloadAt = now;
+    writeLocal(local);
     if (community.remote) {
+      community.downloads += 1;
+      community.ready = true;
+      rememberRemote();
+      paint();
       postCommunity({ op: "download" }).then((data) => {
         applyData(data, true);
         paint();
       }).catch(() => {});
-      community.downloads += 1;
-      writeLocal(local);
-      paint();
       return;
     }
-    local.extraDownloads = (Number(local.extraDownloads) || 0) + 1;
+    community.downloads += 1;
+    community.ready = true;
+    local.extraDownloads = community.downloads;
     writeLocal(local);
     paint();
   };
@@ -482,12 +523,19 @@
     });
   }
 
+  hydrateFromCache();
   paint();
   fetch("api/community")
     .then((res) => (res.ok ? res.json() : Promise.reject()))
     .then((data) => { applyData(data, true); paint(); })
-    .catch(() => fetch("data/community.json")
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => { applyData(data, false); paint(); })
-      .catch(() => { paint(); }));
+    .catch(() => {
+      if (community.ready && community.remote) {
+        paint();
+        return;
+      }
+      fetch("data/community.json")
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then((data) => { applyData(data, false); paint(); })
+        .catch(() => { paint(); });
+    });
 })();

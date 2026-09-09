@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("COMMUNITY_PATH") or (ROOT / "data" / "community.json"))
 LOCK = threading.Lock()
 MAIL_TO = "amexdire27@gmail.com"
+_LIVE = {"downloads": 0, "rating_sum": 0, "rating_count": 0}
 
 
 def _load_dotenv() -> None:
@@ -86,17 +87,24 @@ def load() -> dict:
             if 1 <= value <= 5:
                 rating_sum += value
                 rating_count += 1
-    return {
+    parsed = {
         "downloads": int(downloads) if isinstance(downloads, int) and downloads >= 0 else 0,
         "rating_sum": max(0, rating_sum),
         "rating_count": max(0, rating_count),
     }
+    _LIVE["downloads"] = max(_LIVE["downloads"], parsed["downloads"])
+    _LIVE["rating_sum"] = max(_LIVE["rating_sum"], parsed["rating_sum"])
+    _LIVE["rating_count"] = max(_LIVE["rating_count"], parsed["rating_count"])
+    return dict(_LIVE)
 
 
 def save(data: dict) -> None:
+    _LIVE["downloads"] = max(_LIVE["downloads"], int(data.get("downloads") or 0))
+    _LIVE["rating_sum"] = max(_LIVE["rating_sum"], int(data.get("rating_sum") or 0))
+    _LIVE["rating_count"] = max(_LIVE["rating_count"], int(data.get("rating_count") or 0))
     DATA.parent.mkdir(parents=True, exist_ok=True)
     DATA.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+        json.dumps(_LIVE, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
 
