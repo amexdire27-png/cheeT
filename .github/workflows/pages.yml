@@ -3,6 +3,8 @@ name: GitHub Pages
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - "site/data/community.json"
   workflow_dispatch:
 
 permissions:

@@ -10,19 +10,27 @@ On Render, bind 0.0.0.0 and $PORT. Notes go to MAIL_TO via Resend
 
 from __future__ import annotations
 
+import base64
 import gzip
 import json
 import os
 import re
 import threading
+import urllib.error
+import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("COMMUNITY_PATH") or (ROOT / "data" / "community.json"))
+SNAPSHOT_API = (
+    os.environ.get("COMMUNITY_SNAPSHOT_URL")
+    or "https://api.github.com/repos/amexdire27-png/cheeT/contents/site/data/community.json"
+)
 LOCK = threading.Lock()
 MAIL_TO = "amexdire27@gmail.com"
 _LIVE = {"downloads": 0, "rating_sum": 0, "rating_count": 0}
+_SEEDED = False
 
 
 def _load_dotenv() -> None:
@@ -62,11 +70,7 @@ def _empty() -> dict:
     return {"downloads": 0, "rating_sum": 0, "rating_count": 0}
 
 
-def load() -> dict:
-    try:
-        data = json.loads(DATA.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return _empty()
+def _counts_from(data: object) -> dict:
     if not isinstance(data, dict):
         return _empty()
     downloads = data.get("downloads")
@@ -87,21 +91,80 @@ def load() -> dict:
             if 1 <= value <= 5:
                 rating_sum += value
                 rating_count += 1
-    parsed = {
+    return {
         "downloads": int(downloads) if isinstance(downloads, int) and downloads >= 0 else 0,
         "rating_sum": max(0, rating_sum),
         "rating_count": max(0, rating_count),
     }
-    _LIVE["downloads"] = max(_LIVE["downloads"], parsed["downloads"])
-    _LIVE["rating_sum"] = max(_LIVE["rating_sum"], parsed["rating_sum"])
-    _LIVE["rating_count"] = max(_LIVE["rating_count"], parsed["rating_count"])
+
+
+def _merge(parsed: dict) -> None:
+    _LIVE["downloads"] = max(_LIVE["downloads"], int(parsed.get("downloads") or 0))
+    _LIVE["rating_sum"] = max(_LIVE["rating_sum"], int(parsed.get("rating_sum") or 0))
+    _LIVE["rating_count"] = max(_LIVE["rating_count"], int(parsed.get("rating_count") or 0))
+
+
+def _read_file() -> dict:
+    try:
+        data = json.loads(DATA.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return _empty()
+    return _counts_from(data)
+
+
+def _fetch_snapshot() -> dict | None:
+    url = (SNAPSHOT_API or "").strip()
+    if not url:
+        return None
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "cheeT1-site",
+                "Accept": "application/vnd.github+json",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=10) as res:
+            payload = json.loads(res.read().decode("utf-8"))
+        if isinstance(payload, dict) and payload.get("encoding") == "base64":
+            decoded = base64.b64decode(payload.get("content") or "").decode("utf-8")
+            payload = json.loads(decoded)
+        parsed = _counts_from(payload)
+        print(
+            f"Community snapshot: {parsed['downloads']} downloads, "
+            f"{parsed['rating_count']} scores",
+            flush=True,
+        )
+        return parsed
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, urllib.error.URLError) as exc:
+        print(f"Community snapshot skipped: {exc}", flush=True)
+        return None
+
+
+def seed() -> None:
+    global _SEEDED
+    if _SEEDED:
+        return
+    _merge(_read_file())
+    remote = _fetch_snapshot()
+    if remote:
+        _merge(remote)
+    DATA.parent.mkdir(parents=True, exist_ok=True)
+    DATA.write_text(
+        json.dumps(_LIVE, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    _SEEDED = True
+
+
+def load() -> dict:
+    seed()
+    _merge(_read_file())
     return dict(_LIVE)
 
 
 def save(data: dict) -> None:
-    _LIVE["downloads"] = max(_LIVE["downloads"], int(data.get("downloads") or 0))
-    _LIVE["rating_sum"] = max(_LIVE["rating_sum"], int(data.get("rating_sum") or 0))
-    _LIVE["rating_count"] = max(_LIVE["rating_count"], int(data.get("rating_count") or 0))
+    _merge(_counts_from(data))
     DATA.parent.mkdir(parents=True, exist_ok=True)
     DATA.write_text(
         json.dumps(_LIVE, indent=2, ensure_ascii=False) + "\n",
@@ -303,12 +366,15 @@ class Handler(SimpleHTTPRequestHandler):
 
 def main() -> None:
     DATA.parent.mkdir(parents=True, exist_ok=True)
-    if not DATA.exists():
-        save(_empty())
+    seed()
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8765"))
     httpd = ThreadingHTTPServer((host, port), Handler)
     print(f"cheeT1 site: http://{host}:{port}/", flush=True)
+    print(
+        f"Community: {_LIVE['downloads']} downloads, {_LIVE['rating_count']} scores",
+        flush=True,
+    )
     if (os.environ.get("RESEND_API_KEY") or "").strip():
         print("Mail: Resend ready", flush=True)
     else:

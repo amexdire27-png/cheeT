@@ -194,6 +194,9 @@
   }
 
   const STORE = "cheeT1.community.v1";
+  const COMMUNITY_API = (
+    location.hostname === "127.0.0.1" || location.hostname === "localhost"
+  ) ? "api/community" : "https://cheet1-site.onrender.com/api/community";
   const fmtNum = new Intl.NumberFormat();
 
   const readLocal = () => {
@@ -230,21 +233,11 @@
 
   const hydrateFromCache = () => {
     const local = readLocal();
-    if (local.fromRemote) {
-      community.downloads = Math.max(0, Number(local.downloads) || 0);
-      community.ratingSum = Math.max(0, Number(local.ratingSum) || 0);
-      community.ratingCount = Math.max(0, Number(local.ratingCount) || 0);
-      community.remote = true;
-      community.ready = true;
-      return;
-    }
-    const extras = Number(local.extraDownloads) || 0;
-    if (extras > 0) {
-      community.downloads = extras;
-      community.ratingSum = Math.max(0, Number(local.ratingSum) || 0);
-      community.ratingCount = Math.max(0, Number(local.ratingCount) || 0);
-      community.ready = true;
-    }
+    if (!local.fromRemote) return;
+    community.downloads = Math.max(0, Number(local.downloads) || 0);
+    community.ratingSum = Math.max(0, Number(local.ratingSum) || 0);
+    community.ratingCount = Math.max(0, Number(local.ratingCount) || 0);
+    community.ready = true;
   };
 
   const STAR_PATH = "M12 2.2 14.8 8.4 21.6 9.1 16.5 13.6 18 20.5 12 17.1 6 20.5 7.5 13.6 2.4 9.1 9.2 8.4Z";
@@ -258,7 +251,7 @@
   const MAIL_TO = "amexdire27@gmail.com";
 
   const postCommunity = async (payload) => {
-    const res = await fetch("api/community", {
+    const res = await fetch(COMMUNITY_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -303,13 +296,9 @@
     }
     sum = Math.max(0, sum);
     count = Math.max(0, count);
-    const keepDown = remote && community.ready && incomingDown < community.downloads;
-    const keepScores = remote && community.ready && count < community.ratingCount;
-    community.downloads = keepDown ? community.downloads : incomingDown;
-    if (!keepScores) {
-      community.ratingSum = sum;
-      community.ratingCount = count;
-    }
+    community.downloads = incomingDown;
+    community.ratingSum = sum;
+    community.ratingCount = count;
     community.remote = Boolean(remote);
     community.ready = true;
     if (remote) rememberRemote();
@@ -346,22 +335,16 @@
     if (now - (Number(local.lastDownloadAt) || 0) < 4000) return;
     local.lastDownloadAt = now;
     writeLocal(local);
-    if (community.remote) {
-      community.downloads += 1;
-      community.ready = true;
-      rememberRemote();
-      paint();
-      postCommunity({ op: "download" }).then((data) => {
-        applyData(data, true);
-        paint();
-      }).catch(() => {});
-      return;
-    }
     community.downloads += 1;
     community.ready = true;
-    local.extraDownloads = community.downloads;
-    writeLocal(local);
     paint();
+    postCommunity({ op: "download" }).then((data) => {
+      applyData(data, true);
+      paint();
+    }).catch(() => {
+      community.downloads = Math.max(0, community.downloads - 1);
+      paint();
+    });
   };
 
   qa(".js-download").forEach((btn) => {
@@ -468,37 +451,24 @@
       }
 
       try {
-        if (community.remote) {
-          const data = await postCommunity({
-            op: "review",
-            name,
-            note,
-            rating,
-            at: new Date().toISOString(),
-            company: ""
-          });
-          applyData(data, true);
-          form.reset();
-          paintStars(0);
-          dirty = false;
-          if (live) {
-            live.textContent = data.mail_ok === false
-              ? "Score saved. Email is not set on Render — add RESEND_API_KEY."
-              : (note ? "Note sent." : "Score sent.");
-          }
-          paint();
-        } else {
-          await postNoteMail({ name, note, rating });
-          const local = readLocal();
-          local.ratingSum = (Number(local.ratingSum) || 0) + rating;
-          local.ratingCount = (Number(local.ratingCount) || 0) + 1;
-          writeLocal(local);
-          form.reset();
-          paintStars(0);
-          dirty = false;
-          if (live) live.textContent = note ? "Note sent." : "Score sent.";
-          paint();
+        const data = await postCommunity({
+          op: "review",
+          name,
+          note,
+          rating,
+          at: new Date().toISOString(),
+          company: ""
+        });
+        applyData(data, true);
+        form.reset();
+        paintStars(0);
+        dirty = false;
+        if (live) {
+          live.textContent = data.mail_ok === false
+            ? "Score saved. Email is not set on Render — add RESEND_API_KEY."
+            : (note ? "Note sent." : "Score sent.");
         }
+        paint();
       } catch {
         if (live) live.textContent = "Could not send.";
       } finally {
@@ -525,17 +495,8 @@
 
   hydrateFromCache();
   paint();
-  fetch("api/community")
+  fetch(COMMUNITY_API)
     .then((res) => (res.ok ? res.json() : Promise.reject()))
     .then((data) => { applyData(data, true); paint(); })
-    .catch(() => {
-      if (community.ready && community.remote) {
-        paint();
-        return;
-      }
-      fetch("data/community.json")
-        .then((res) => (res.ok ? res.json() : Promise.reject()))
-        .then((data) => { applyData(data, false); paint(); })
-        .catch(() => { paint(); });
-    });
+    .catch(() => { paint(); });
 })();

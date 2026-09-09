@@ -5,11 +5,52 @@ on:
     - cron: "*/12 * * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: community-snapshot
+  cancel-in-progress: false
+
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Wake the site
+      - uses: actions/checkout@v4
+      - name: Wake and read live counts
         run: |
-          curl -fsS -o /dev/null -w "%{http_code}\n" --max-time 90 https://cheet1-site.onrender.com/
-          curl -fsS -o /dev/null --max-time 90 https://cheet1-site.onrender.com/api/community
+          curl -fsS -o /dev/null --max-time 90 https://cheet1-site.onrender.com/
+          curl -fsS --max-time 90 https://cheet1-site.onrender.com/api/community > /tmp/live.json
+      - name: Snapshot if counts grew
+        run: |
+          python3 << 'PY'
+          import json
+          from pathlib import Path
+          live = json.loads(Path("/tmp/live.json").read_text(encoding="utf-8"))
+          path = Path("site/data/community.json")
+          cur = json.loads(path.read_text(encoding="utf-8"))
+          out = {
+              "downloads": max(int(cur.get("downloads") or 0), int(live.get("downloads") or 0)),
+              "rating_sum": max(int(cur.get("rating_sum") or 0), int(live.get("rating_sum") or 0)),
+              "rating_count": max(int(cur.get("rating_count") or 0), int(live.get("rating_count") or 0)),
+          }
+          same = (
+              out["downloads"] == int(cur.get("downloads") or 0)
+              and out["rating_sum"] == int(cur.get("rating_sum") or 0)
+              and out["rating_count"] == int(cur.get("rating_count") or 0)
+          )
+          if same:
+              raise SystemExit(0)
+          path.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+          print(out)
+          PY
+          git add site/data/community.json
+          if git diff --staged --quiet; then
+            echo "No count change"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Snapshot community counts. [skip render]"
+          git pull --rebase origin master
+          git push
